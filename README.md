@@ -131,6 +131,29 @@ On the web:
 - **Assets must work in the browser.** gpui-kit fetches icons over HTTP on the
   web (see the demo's `assets()`).
 
+## Reloading while you work
+
+```sh
+cargo styleguide dev               # native: rebuild and reopen on every save
+cargo styleguide serve --watch     # web: rebuild the wasm and reload the page
+```
+
+Both watch the package and every local crate it builds from.
+
+- **`dev`** rebuilds the native styleguide and reopens it at the same example,
+  theme and knobs. Natively, a rebuild usually takes a few seconds.
+- **`serve --watch`** rebuilds the wasm and reloads the page. The URL keeps
+  the example, theme and knobs. Wasm rebuilds are slower than native ones, so
+  prefer `dev` for quick iteration.
+- **A failed build keeps the last good one running.** The errors print in the
+  terminal.
+- **Knobs survive a reload only in isolation.** On a component page they
+  reset, so use "Open isolated" for the example you're working on.
+
+This rebuilds and restarts; it does not patch the running code.
+[subsecond](https://crates.io/crates/subsecond) hot-patching only patches the
+binary crate, and your components live in a library.
+
 ## Previews in rustdoc and on docs.rs
 
 ```rust

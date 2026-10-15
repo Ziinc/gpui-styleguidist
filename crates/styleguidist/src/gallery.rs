@@ -164,13 +164,11 @@ impl Gallery {
                 })
             }
         };
-        #[cfg(all(feature = "web", target_family = "wasm"))]
-        crate::web::link(&route, self.theme_name());
+        crate::link::publish(&route, self.theme_name());
         self.route = route;
         cx.notify();
     }
 
-    #[cfg_attr(not(all(feature = "web", target_family = "wasm")), allow(dead_code))]
     fn theme_name(&self) -> Option<&str> {
         self.guide
             .themes
@@ -617,8 +615,8 @@ impl ExampleBlock {
     fn knobs_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.preview = build_preview(&self.guide, self.index, self.knobs.clone(), window, cx);
         self.copied = false;
-        // Keep an isolated example's URL in step, so it can be shared.
-        #[cfg(all(feature = "web", target_family = "wasm"))]
+        // Keep an isolated example's link in step, so it can be shared and a
+        // reload reopens the same knobs.
         if self.isolated
             && let Some(gallery) = self.gallery.upgrade()
         {
@@ -632,7 +630,10 @@ impl ExampleBlock {
                 id: self.example().id().clone(),
                 knobs,
             };
-            crate::web::link(&route, gallery.read(cx).theme_name());
+            gallery.update(cx, |gallery, _| {
+                crate::link::publish(&route, gallery.theme_name());
+                gallery.route = route;
+            });
         }
         cx.notify();
     }
@@ -1211,19 +1212,31 @@ pub fn open(
 /// lifetime on the web, where the route comes from the URL. `example` opens
 /// that example's component (or that component, by name).
 pub fn run(guide: Styleguide, example: Option<String>) {
+    let route = example.map(|id| Route::Component(id.into()));
+    #[cfg(all(feature = "web", target_family = "wasm"))]
+    let (route, theme) = match route {
+        Some(route) => (Some(route), None),
+        None => crate::web::current_link(),
+    };
+    #[cfg(not(all(feature = "web", target_family = "wasm")))]
+    let theme = None;
+    launch(guide, route, theme);
+}
+
+/// Runs the styleguide app opened at `link`, a URL hash such as
+/// `#!/button/primary?theme=dark&disabled=true`. `cargo styleguide dev` uses
+/// it to reopen the same place after a rebuild.
+pub fn run_link(guide: Styleguide, link: &str) {
+    let (route, theme) = crate::link::parse(link);
+    launch(guide, route, theme);
+}
+
+fn launch(guide: Styleguide, route: Option<Route>, theme: Option<String>) {
     let guide = Rc::new(guide);
-    #[allow(unused_mut)]
-    let mut route = example.map(|id| Route::Component(id.into()));
-    #[allow(unused_mut)]
-    let mut theme = None;
     #[cfg(not(target_family = "wasm"))]
     let mut app = gpui_platform::application();
     #[cfg(all(feature = "web", target_family = "wasm"))]
     let mut app = crate::web::application();
-    #[cfg(all(feature = "web", target_family = "wasm"))]
-    if route.is_none() {
-        (route, theme) = crate::web::current_link();
-    }
     if let Some(assets) = guide.assets.clone() {
         app = app.with_assets(SharedAssets(assets));
     }

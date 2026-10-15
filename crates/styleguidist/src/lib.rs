@@ -22,6 +22,8 @@ pub mod docs;
 pub mod gallery;
 mod guide;
 mod knobs;
+#[cfg(feature = "gallery")]
+mod link;
 #[cfg(any(feature = "render", feature = "gallery"))]
 mod preview;
 #[cfg(all(feature = "render", not(target_family = "wasm")))]
