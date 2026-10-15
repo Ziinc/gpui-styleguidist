@@ -29,7 +29,7 @@ pub fn main(guide: Styleguide) {
     #[cfg(target_family = "wasm")]
     {
         if let Err(error) = gallery(guide, None) {
-            crate::example::log_error(&format!("{error:#}"));
+            crate::guide::log_error(&format!("{error:#}"));
         }
     }
     #[cfg(not(target_family = "wasm"))]

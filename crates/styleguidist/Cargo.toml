@@ -1,6 +1,6 @@
 [package]
 name = "gpui-styleguidist"
-description = "A living styleguide for GPUI components: an interactive gallery with knobs, built natively and to WebAssembly, plus headless snapshot rendering."
+description = "A living styleguide for GPUI components: a Styleguidist-style wasm playground, rendered previews in rustdoc and docs.rs, and snapshot tests."
 readme = "../../README.md"
 keywords = ["gpui", "styleguide", "storybook", "wasm", "ui"]
 categories = ["gui", "development-tools", "wasm"]
@@ -8,10 +8,13 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-include = ["src/**", "fonts/**", "Cargo.toml"]
+include = ["src/**", "assets/**", "fonts/**", "Cargo.toml"]
 
 [features]
-default = ["gallery"]
+default = ["macros", "gallery"]
+# `example!` and the rustdoc preview macros. Needs no GPU or network, so it is
+# safe on docs.rs.
+macros = ["dep:gpui-styleguidist-macros"]
 # The interactive gallery, native and (with `web`) in the browser.
 gallery = ["dep:gpui_platform"]
 # Build the gallery for wasm32-unknown-unknown: the browser platform, hash
@@ -24,6 +27,8 @@ render = ["dep:gpui_platform", "gpui/test-support", "gpui_platform/test-support"
 
 [dependencies]
 gpui.workspace = true
+gpui-styleguidist-macros = { workspace = true, optional = true }
+gpui-styleguidist-manifest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true

@@ -27,6 +27,8 @@ jobs:
       - run: cargo test --workspace
       - name: Snapshots match
         run: cargo run -p kit-demo --example styleguide -- check
+      - name: Docs build as on docs.rs
+        run: cargo rustdoc -p kit-demo -- --html-in-header examples/kit-demo/styleguide/header.html -D warnings
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -47,7 +49,7 @@ jobs:
           version=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
           cargo install wasm-bindgen-cli --version "$version" --locked
       - name: Build the web styleguide
-        run: cargo run -p cargo-styleguide -- styleguide build -p kit-demo --release --out site
+        run: cargo run -p cargo-styleguide -- styleguide build -p kit-demo --profile styleguide --out site
       - uses: actions/upload-artifact@v4
         with:
           name: kit-demo-styleguide

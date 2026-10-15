@@ -1,5 +1,7 @@
-//! The snapshot manifest `styleguide render` writes and `styleguide check`
-//! compares against, at `styleguide/manifest.json` next to the PNG snapshots.
+//! The snapshot manifest `styleguide render` writes, `styleguide check`
+//! compares against and `#[preview]` embeds in rustdoc. It lives at
+//! `styleguide/manifest.json` next to the PNG snapshots, and is plain data so
+//! the doc macros can read it without compiling GPUI.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -14,9 +16,20 @@ pub const DIR: &str = "styleguide";
 /// File name of the manifest inside [`DIR`].
 pub const FILE: &str = "manifest.json";
 
+/// A hash of the manifest, rewritten on every render. `#[preview]` includes it
+/// so rustdoc rebuilds when snapshots change.
+pub const STAMP: &str = "stamp";
+
+/// The rustdoc `--html-in-header` file that makes previews interactive.
+pub const HEADER: &str = "header.html";
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     pub version: u32,
+    /// The hosted wasm styleguide; docs open `<url>#!/<example id>` in an
+    /// iframe as the live playground.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playground_url: Option<String>,
     pub examples: Vec<ExampleEntry>,
 }
 
@@ -34,6 +47,9 @@ pub struct ExampleEntry {
     pub component: Option<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    /// The example's source, captured by `example!`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub knobs: Vec<KnobEntry>,
     pub themes: Vec<String>,

@@ -23,7 +23,9 @@ options:
                        workspace member with a `styleguide` example)
   --example NAME       the example that calls gpui_styleguidist::main
                        (default: styleguide)
-  --release            optimized build (default for serve: debug)
+  --release            optimized build with the `release` profile
+  --profile NAME       optimized build with this cargo profile, e.g. one with
+                       opt-level = 'z' and lto for a smaller download
   --out DIR            site directory (default: target/styleguide/<package>)
   --title TEXT         page title (default: the package name)
   --toolchain NAME     rustup toolchain for the wasm build (default: nightly,
@@ -44,6 +46,7 @@ struct Options {
     out: Option<PathBuf>,
     title: Option<String>,
     toolchain: String,
+    profile: String,
     port: u16,
 }
 
@@ -69,6 +72,7 @@ fn run(args: Vec<String>) -> Result<()> {
         out: None,
         title: None,
         toolchain: "nightly".into(),
+        profile: "release".into(),
         port: 8000,
     };
     while let Some(arg) = args.next() {
@@ -80,6 +84,10 @@ fn run(args: Vec<String>) -> Result<()> {
             "-p" | "--package" => options.package = Some(value()?),
             "--example" => options.example = value()?,
             "--release" => options.release = true,
+            "--profile" => {
+                options.release = true;
+                options.profile = value()?;
+            }
             "--out" => options.out = Some(value()?.into()),
             "--title" => options.title = Some(value()?),
             "--toolchain" => options.toolchain = value()?,
@@ -129,7 +137,7 @@ fn build(options: &Options) -> Result<PathBuf> {
         TARGET,
     ]);
     if options.release {
-        cargo.arg("--release");
+        cargo.args(["--profile", &options.profile]);
     }
     cargo.args(["--", "-C", &format!("link-arg={STACK_SIZE}")]);
     let status = cargo.status().context("running cargo")?;
@@ -142,7 +150,11 @@ fn build(options: &Options) -> Result<PathBuf> {
         );
     }
 
-    let profile = if options.release { "release" } else { "debug" };
+    let profile = if options.release {
+        options.profile.as_str()
+    } else {
+        "debug"
+    };
     let wasm = target_dir
         .join(TARGET)
         .join(profile)

@@ -7,7 +7,7 @@ edition.workspace = true
 
 [dependencies]
 gpui-kit = "=0.7.3"
-gpui-styleguidist.workspace = true
+gpui-styleguidist = { workspace = true, features = ["macros"] }
 
 # Native: the gallery window plus headless snapshot rendering.
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
@@ -20,3 +20,6 @@ gpui-styleguidist = { workspace = true, features = ["web"] }
 
 [[example]]
 name = "styleguide"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "styleguide/header.html"]

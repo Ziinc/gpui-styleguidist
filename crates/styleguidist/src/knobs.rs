@@ -1,5 +1,5 @@
-use crate::manifest::{KnobControl, KnobEntry, KnobValue};
 use gpui::SharedString;
+use gpui_styleguidist_manifest::{KnobControl, KnobEntry, KnobValue};
 use std::{cell::RefCell, collections::BTreeMap, ops::RangeInclusive, rc::Rc};
 
 /// The editable props of one example.
@@ -18,6 +18,8 @@ pub struct Knobs(Rc<RefCell<State>>);
 struct State {
     specs: Vec<KnobEntry>,
     values: BTreeMap<String, KnobValue>,
+    /// Values from a URL, typed once the example declares the knob.
+    raw: BTreeMap<String, String>,
 }
 
 impl Knobs {
@@ -26,7 +28,17 @@ impl Knobs {
         Self(Rc::new(RefCell::new(State {
             specs: Vec::new(),
             values,
+            raw: BTreeMap::new(),
         })))
+    }
+
+    /// Knobs that start from untyped values, such as a playground URL's query.
+    /// A value that does not fit its knob is ignored.
+    #[cfg_attr(not(feature = "gallery"), allow(dead_code))]
+    pub(crate) fn with_raw(raw: BTreeMap<String, String>) -> Self {
+        let knobs = Self::default();
+        knobs.0.borrow_mut().raw = raw;
+        knobs
     }
 
     /// A switch.
@@ -91,6 +103,12 @@ impl Knobs {
 
     fn read(&self, name: &str, control: KnobControl, default: KnobValue) -> KnobValue {
         let mut state = self.0.borrow_mut();
+        if !state.values.contains_key(name)
+            && let Some(raw) = state.raw.remove(name)
+            && let Some(value) = parse(&control, &raw)
+        {
+            state.values.insert(name.into(), value);
+        }
         if !state.specs.iter().any(|spec| spec.name == name) {
             state.specs.push(KnobEntry {
                 name: name.into(),
@@ -126,6 +144,18 @@ impl Knobs {
     /// Resets every knob to its default.
     pub fn reset(&self) {
         self.0.borrow_mut().values.clear();
+    }
+}
+
+fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
+    match control {
+        KnobControl::Bool => raw.parse().ok().map(KnobValue::Bool),
+        KnobControl::Select { options } => options
+            .iter()
+            .any(|option| option == raw)
+            .then(|| KnobValue::Text(raw.into())),
+        KnobControl::Text { .. } => Some(KnobValue::Text(raw.into())),
+        KnobControl::Number { .. } => raw.parse().ok().map(KnobValue::Number),
     }
 }
 
@@ -210,6 +240,21 @@ mod tests {
         );
         assert_eq!(knobs.specs().len(), 3);
         assert_eq!(knobs.value("disabled"), Some(KnobValue::Bool(false)));
+    }
+
+    #[test]
+    fn raw_values_are_typed_by_their_knob() {
+        let raw = [("disabled", "true"), ("variant", "nope"), ("width", "42")]
+            .into_iter()
+            .map(|(name, value)| (name.to_string(), value.to_string()))
+            .collect();
+        let knobs = Knobs::with_raw(raw);
+        assert!(knobs.bool("disabled", false));
+        assert_eq!(
+            knobs.select("variant", &["primary", "ghost"], "primary"),
+            "primary"
+        );
+        assert_eq!(knobs.number("width", 120., 0.0..=400., 10.), 42.);
     }
 
     #[test]

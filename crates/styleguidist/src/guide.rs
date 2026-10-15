@@ -19,6 +19,7 @@ pub struct Example {
     title: Option<SharedString>,
     component: Option<SharedString>,
     description: SharedString,
+    source: SharedString,
     size: Option<Size<Pixels>>,
     build: BuildFn,
 }
@@ -67,6 +68,7 @@ impl Example {
             title: None,
             component: None,
             description: SharedString::default(),
+            source: SharedString::default(),
             size: None,
             build,
         }
@@ -87,6 +89,13 @@ impl Example {
     /// Plain text shown under the title.
     pub fn description(mut self, description: impl Into<SharedString>) -> Self {
         self.description = description.into();
+        self
+    }
+
+    /// The code shown under "View code". [`example!`](crate::example) fills it
+    /// from the example's source.
+    pub fn source(mut self, source: impl Into<SharedString>) -> Self {
+        self.source = source.into();
         self
     }
 
@@ -131,6 +140,10 @@ impl Example {
 
     pub fn description_text(&self) -> &SharedString {
         &self.description
+    }
+
+    pub fn source_text(&self) -> &SharedString {
+        &self.source
     }
 
     pub(crate) fn fixed_size(&self) -> Option<Size<Pixels>> {
@@ -204,6 +217,8 @@ pub struct Styleguide {
     pub(crate) background: Rc<dyn Fn(&App) -> Hsla>,
     pub(crate) assets: Option<Arc<dyn AssetSource>>,
     pub(crate) fonts: Vec<Cow<'static, [u8]>>,
+    pub(crate) playground_url: Option<String>,
+    pub(crate) components: Vec<(SharedString, SharedString)>,
     pub(crate) crate_dir: Option<PathBuf>,
     pub(crate) variant_limit: usize,
 }
@@ -220,6 +235,8 @@ impl Styleguide {
             background: Rc::new(|_| white()),
             assets: None,
             fonts: Vec::new(),
+            playground_url: None,
+            components: Vec::new(),
             crate_dir: None,
             variant_limit: 24,
         }
@@ -232,6 +249,18 @@ impl Styleguide {
 
     pub fn examples(mut self, examples: impl IntoIterator<Item = Example>) -> Self {
         self.examples.extend(examples);
+        self
+    }
+
+    /// The introduction shown at the top of a component's page, above its
+    /// props and examples. Components appear in the order first described or
+    /// first used by an example.
+    pub fn describe(
+        mut self,
+        component: impl Into<SharedString>,
+        description: impl Into<SharedString>,
+    ) -> Self {
+        self.components.push((component.into(), description.into()));
         self
     }
 
@@ -287,6 +316,13 @@ impl Styleguide {
         self
     }
 
+    /// The hosted wasm styleguide (`cargo styleguide build`). Rustdoc previews
+    /// offer it as a live playground, opened at `<url>#!/<example id>`.
+    pub fn playground_url(mut self, url: impl Into<String>) -> Self {
+        self.playground_url = Some(url.into());
+        self
+    }
+
     /// Where `styleguide/` is written. Defaults to `CARGO_MANIFEST_DIR`, which
     /// `cargo run` sets to the crate being run.
     pub fn crate_dir(mut self, dir: impl Into<PathBuf>) -> Self {
@@ -315,7 +351,7 @@ impl Styleguide {
             .clone()
             .or_else(|| std::env::var_os("CARGO_MANIFEST_DIR").map(PathBuf::from))
             .unwrap_or_else(|| PathBuf::from("."))
-            .join(crate::manifest::DIR)
+            .join(gpui_styleguidist_manifest::DIR)
     }
 
     pub(crate) fn run_setup(&self, cx: &mut App) {

@@ -1,8 +1,5 @@
 //! Headless rendering of examples to PNG snapshots.
 
-use crate::manifest::{
-    self as manifest, ExampleEntry, KnobValue, Manifest, VariantEntry, variant_key,
-};
 use crate::{
     Example, Frame, Knobs, Styleguide,
     knobs::variants,
@@ -12,6 +9,9 @@ use anyhow::{Context as _, Result, anyhow, bail};
 use gpui::{
     AnyWindowHandle, AppContext as _, Bounds, HeadlessAppContext, PlatformTextSystem, WindowBounds,
     WindowOptions, px, size,
+};
+use gpui_styleguidist_manifest::{
+    self as manifest, ExampleEntry, KnobValue, Manifest, VariantEntry, variant_key,
 };
 use image::RgbaImage;
 use std::{
@@ -122,6 +122,7 @@ impl<'a> Renderer<'a> {
             title: example.display_title().to_string(),
             component: example.component_name().map(|name| name.to_string()),
             description: example.description_text().to_string(),
+            source: example.source_text().to_string(),
             knobs: knob_specs,
             themes: self
                 .guide
@@ -256,12 +257,14 @@ fn read_manifest(dir: &Path) -> Result<Option<Manifest>> {
     ))
 }
 
-/// `styleguide render`: writes snapshots and their manifest under `styleguide/`.
+/// `styleguide render`: writes snapshots, the manifest, the rustdoc header and
+/// the rebuild stamp under `styleguide/`.
 pub(crate) fn render(guide: &Styleguide, filter: Option<&str>) -> Result<()> {
     let dir = guide.output_dir();
     let renderer = Renderer::new(guide)?;
     let mut manifest = read_manifest(&dir)?.unwrap_or_default();
     manifest.version = manifest::VERSION;
+    manifest.playground_url = guide.playground_url.clone();
     // Drop examples that no longer exist; keep unselected ones as they are.
     manifest.examples.retain(|entry| {
         guide
@@ -312,6 +315,11 @@ fn write_outputs(dir: &Path, manifest: &Manifest) -> Result<()> {
     fs::create_dir_all(dir)?;
     let json = serde_json::to_string_pretty(manifest)?;
     fs::write(dir.join(manifest::FILE), format!("{json}\n"))?;
+    fs::write(
+        dir.join(manifest::STAMP),
+        format!("{:016x}", fnv1a(json.as_bytes())),
+    )?;
+    fs::write(dir.join(manifest::HEADER), crate::docs::header())?;
     Ok(())
 }
 

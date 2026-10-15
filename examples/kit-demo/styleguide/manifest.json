@@ -1,11 +1,13 @@
 {
   "version": 1,
+  "playground_url": null,
   "examples": [
     {
       "id": "action-button/tones",
-      "title": "Tones",
+      "title": "Playground",
       "component": "ActionButton",
-      "description": "Use `Primary` once per surface, `Danger` only for destructive actions.",
+      "description": "Every prop as a knob.",
+      "source": "let tone = knobs.select(\"tone\", &[\"primary\", \"neutral\", \"danger\"], \"primary\");\nlet tone = Tone::ALL\n    .iter()\n    .find(|(name, _)| *name == tone)\n    .map_or(Tone::Primary, |(_, tone)| *tone);\nlet size = match knobs.select(\"size\", &[\"small\", \"medium\", \"large\"], \"medium\") {\n    \"small\" => Size::Small,\n    \"large\" => Size::Large,\n    _ => Size::Medium,\n};\nActionButton::new(\n    \"action\",\n    knobs.text_samples(\"label\", &[\"Save changes\", \"Delete\"]),\n)\n.tone(tone)\n.size(size)\n.disabled(knobs.bool(\"disabled\", false))\n.loading(knobs.bool(\"loading\", false))",
       "knobs": [
         {
           "name": "tone",
@@ -313,9 +315,43 @@
       ]
     },
     {
+      "id": "action-button/all-tones",
+      "title": "Tones side by side",
+      "component": "ActionButton",
+      "description": "Use Primary once per surface.",
+      "source": "h_flex()\n    .gap_2()\n    .child(ActionButton::new(\"primary\", \"Publish\").tone(Tone::Primary))\n    .child(ActionButton::new(\"neutral\", \"Save draft\").tone(Tone::Neutral))\n    .child(ActionButton::new(\"danger\", \"Delete\").tone(Tone::Danger))",
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "variants": [
+        {
+          "theme": "light",
+          "key": "",
+          "is_default": true,
+          "file": "snapshots/action-button/all-tones/light/default.png",
+          "width": 279,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "f69143cbdb58a037"
+        },
+        {
+          "theme": "dark",
+          "key": "",
+          "is_default": true,
+          "file": "snapshots/action-button/all-tones/dark/default.png",
+          "width": 279,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "8cb741e3e220110f"
+        }
+      ]
+    },
+    {
       "id": "setting-row/notifications",
       "title": "Notifications",
       "component": "SettingRow",
+      "source": "SettingRow::new(\"notifications\", knobs.text(\"title\", \"Notifications\"))\n    .description(knobs.text(\"description\", \"Send me a summary every morning.\"))\n    .checked(knobs.bool(\"checked\", true))\n    .disabled(knobs.bool(\"disabled\", false))",
       "knobs": [
         {
           "name": "title",
@@ -474,10 +510,43 @@
       ]
     },
     {
+      "id": "setting-row/list",
+      "title": "A settings list",
+      "component": "SettingRow",
+      "source": "v_flex()\n    .gap_4()\n    .child(\n        SettingRow::new(\"sync\", \"Sync\")\n            .description(\"Keep files on every device.\")\n            .checked(true),\n    )\n    .child(SettingRow::new(\"beta\", \"Beta features\").checked(false))\n    .child(\n        SettingRow::new(\"admin\", \"Admin mode\")\n            .description(\"Managed by your organization.\")\n            .disabled(true),\n    )",
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "variants": [
+        {
+          "theme": "light",
+          "key": "",
+          "is_default": true,
+          "file": "snapshots/setting-row/list/light/default.png",
+          "width": 392,
+          "height": 181,
+          "scale": 2.0,
+          "hash": "51d77c15f547617f"
+        },
+        {
+          "theme": "dark",
+          "key": "",
+          "is_default": true,
+          "file": "snapshots/setting-row/list/dark/default.png",
+          "width": 392,
+          "height": 181,
+          "scale": 2.0,
+          "hash": "d853742e79372876"
+        }
+      ]
+    },
+    {
       "id": "search-field/empty",
       "title": "Empty and filled",
       "component": "SearchField",
-      "description": "A stateful example: knobs rebuild the view and its `InputState`.",
+      "description": "Changing a knob rebuilds the view and its InputState. Click it and type.",
+      "source": "let placeholder = knobs.text(\"placeholder\", \"Search files…\");\nlet value = knobs.text_samples(\"value\", &[\"\", \"invoice\"]);\ncx.new(|cx| {\n    let mut field = SearchField::new(&placeholder, &value, window, cx);\n    field.knobs = knobs.clone();\n    field\n})",
       "knobs": [
         {
           "name": "placeholder",

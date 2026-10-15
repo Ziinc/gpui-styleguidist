@@ -1,5 +1,6 @@
 Font copyright:
 - Copyright 2017 IBM Corp. with Reserved Font Name 'Plex' (IBMPlexSans-Regular.ttf)
+- Copyright 2020 The JetBrains Mono Project Authors (JetBrainsMono-Regular.ttf)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

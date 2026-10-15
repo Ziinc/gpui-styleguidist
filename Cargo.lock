@@ -3075,11 +3075,33 @@ dependencies = [
  "gpui-pre",
  "gpui-pre-platform",
  "gpui-pre-web",
+ "gpui-styleguidist-macros",
+ "gpui-styleguidist-manifest",
  "image",
  "serde",
  "serde_json",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "gpui-styleguidist-macros"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "gpui-styleguidist-manifest",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "gpui-styleguidist-manifest"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

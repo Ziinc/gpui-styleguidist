@@ -1,10 +1,15 @@
 //! A small application component library built on gpui-kit, documented with
 //! gpui-styleguidist.
 //!
-//! - `cargo run -p kit-demo --example styleguide` opens the gallery natively.
-//! - `cargo styleguide serve -p kit-demo` builds it to wasm and serves it.
-//! - `cargo run -p kit-demo --example styleguide -- check` compares the
-//!   examples against the snapshots committed in `styleguide/`.
+//! Every component below shows its rendered examples. Pick knob values under a
+//! preview to see other snapshots, or open the live playground.
+//!
+//! - `cargo styleguide serve -p kit-demo` builds the wasm styleguide.
+//! - `cargo run -p kit-demo --example styleguide` opens it natively.
+//! - `cargo run -p kit-demo --example styleguide -- render` re-renders the
+//!   snapshots these docs embed; `-- check` compares against them.
+//!
+#![doc = gpui_styleguidist::preview_html!("setting-row/list", variants = false)]
 
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::{
@@ -18,7 +23,7 @@ use gpui_kit::{
     },
     *,
 };
-use gpui_styleguidist::{Example, Knobs, Styleguide};
+use gpui_styleguidist::{Knobs, Styleguide, example};
 
 /// What an [`ActionButton`] does, which decides its emphasis.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -41,6 +46,7 @@ impl Tone {
 }
 
 /// A labelled command button whose emphasis follows its [`Tone`].
+#[gpui_styleguidist::preview("action-button/tones")]
 #[derive(IntoElement)]
 pub struct ActionButton {
     id: ElementId,
@@ -101,6 +107,7 @@ impl RenderOnce for ActionButton {
 }
 
 /// A settings row: a title, an explanation and a switch.
+#[gpui_styleguidist::preview("setting-row/notifications")]
 #[derive(IntoElement)]
 pub struct SettingRow {
     id: ElementId,
@@ -165,6 +172,7 @@ impl RenderOnce for SettingRow {
 }
 
 /// A search box with a placeholder. Stateful: it owns an [`InputState`].
+#[gpui_styleguidist::preview("search-field/empty")]
 pub struct SearchField {
     input: Entity<InputState>,
     knobs: Knobs,
@@ -213,9 +221,10 @@ fn assets() -> gpui_kit::assets::Assets {
 }
 
 /// This crate's styleguide: every example, both themes, rendered through
-/// gpui-kit's window root.
+/// gpui-kit's window root. `STYLEGUIDE_PLAYGROUND_URL`, when set while
+/// rendering, links rustdoc previews to the hosted wasm styleguide.
 pub fn styleguide() -> Styleguide {
-    Styleguide::new("Kit demo")
+    let guide = Styleguide::new("Kit demo")
         .assets(assets())
         .setup(gpui_kit::init)
         .open_window(|options, frame, cx| Ok(gpui_kit::open_window(options, cx, frame)?.0))
@@ -228,8 +237,22 @@ pub fn styleguide() -> Styleguide {
             Theme::change(mode, None, cx);
         })
         .background(|cx| cx.theme().background)
+        .describe(
+            "ActionButton",
+            "A labelled command button. Its tone says what the action does: Primary for the \
+             one action a surface exists for, Neutral for the rest, Danger for actions that \
+             destroy data.",
+        )
+        .describe(
+            "SettingRow",
+            "One preference in a settings list: a title, an optional explanation and a switch.",
+        )
+        .describe(
+            "SearchField",
+            "A search box that owns its InputState, so its examples are stateful views.",
+        )
         .example(
-            Example::new("action-button/tones", |knobs, _, _| {
+            example!("action-button/tones", |knobs, _, _| {
                 let tone = knobs.select("tone", &["primary", "neutral", "danger"], "primary");
                 let tone = Tone::ALL
                     .iter()
@@ -250,11 +273,23 @@ pub fn styleguide() -> Styleguide {
                 .loading(knobs.bool("loading", false))
             })
             .component("ActionButton")
-            .title("Tones")
-            .description("Use Primary once per surface, and Danger only for destructive actions."),
+            .title("Playground")
+            .description("Every prop as a knob."),
         )
         .example(
-            Example::new("setting-row/notifications", |knobs, _, _| {
+            example!("action-button/all-tones", |_, _, _| {
+                h_flex()
+                    .gap_2()
+                    .child(ActionButton::new("primary", "Publish").tone(Tone::Primary))
+                    .child(ActionButton::new("neutral", "Save draft").tone(Tone::Neutral))
+                    .child(ActionButton::new("danger", "Delete").tone(Tone::Danger))
+            })
+            .component("ActionButton")
+            .title("Tones side by side")
+            .description("Use Primary once per surface."),
+        )
+        .example(
+            example!("setting-row/notifications", |knobs, _, _| {
                 SettingRow::new("notifications", knobs.text("title", "Notifications"))
                     .description(knobs.text("description", "Send me a summary every morning."))
                     .checked(knobs.bool("checked", true))
@@ -264,7 +299,26 @@ pub fn styleguide() -> Styleguide {
             .title("Notifications"),
         )
         .example(
-            Example::view("search-field/empty", |knobs, window, cx| {
+            example!("setting-row/list", |_, _, _| {
+                v_flex()
+                    .gap_4()
+                    .child(
+                        SettingRow::new("sync", "Sync")
+                            .description("Keep files on every device.")
+                            .checked(true),
+                    )
+                    .child(SettingRow::new("beta", "Beta features").checked(false))
+                    .child(
+                        SettingRow::new("admin", "Admin mode")
+                            .description("Managed by your organization.")
+                            .disabled(true),
+                    )
+            })
+            .component("SettingRow")
+            .title("A settings list"),
+        )
+        .example(
+            example!(view "search-field/empty", |knobs, window, cx| {
                 let placeholder = knobs.text("placeholder", "Search files…");
                 let value = knobs.text_samples("value", &["", "invoice"]);
                 cx.new(|cx| {
@@ -276,7 +330,11 @@ pub fn styleguide() -> Styleguide {
             .component("SearchField")
             .title("Empty and filled")
             .description(
-                "A stateful example: changing a knob rebuilds the view and its InputState.",
+                "Changing a knob rebuilds the view and its InputState. Click it and type.",
             ),
-        )
+        );
+    match std::env::var("STYLEGUIDE_PLAYGROUND_URL") {
+        Ok(url) if !url.is_empty() => guide.playground_url(url),
+        _ => guide,
+    }
 }

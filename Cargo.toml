@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/styleguidist", "crates/cli", "examples/kit-demo"]
+members = ["crates/styleguidist", "crates/macros", "crates/manifest", "crates/cli", "examples/kit-demo"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,8 @@ repository = "https://github.com/Ziinc/gpui-styleguidist"
 
 [workspace.dependencies]
 gpui-styleguidist = { path = "crates/styleguidist", version = "0.1.0", default-features = false }
+gpui-styleguidist-macros = { path = "crates/macros", version = "0.1.0" }
+gpui-styleguidist-manifest = { path = "crates/manifest", version = "0.1.0" }
 # The exact gpui-pre snapshot gpui-kit 0.7.3 is built against. Any snapshot can
 # change GPUI's API, so consumers must use the same one; bump them together.
 gpui = { package = "gpui-pre", version = "=0.3.9" }
@@ -19,3 +21,12 @@ wasm-bindgen = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
+
+# `cargo styleguide build --release` uses this profile: the web styleguide is
+# downloaded, so it trades build time for size.
+[profile.styleguide]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
