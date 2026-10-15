@@ -1,0 +1,22 @@
+[package]
+name = "kit-demo"
+description = "gpui-kit components documented with gpui-styleguidist."
+publish = false
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+gpui-kit = "=0.7.3"
+gpui-styleguidist.workspace = true
+
+# Native: the gallery window plus headless snapshot rendering.
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+gpui-kit = { version = "=0.7.3", features = ["test-support"] }
+gpui-styleguidist = { workspace = true, features = ["gallery", "render"] }
+
+# wasm32: the browser gallery that `cargo styleguide build` packages.
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+gpui-styleguidist = { workspace = true, features = ["web"] }
+
+[[example]]
+name = "styleguide"

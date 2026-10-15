@@ -1,0 +1,627 @@
+{
+  "version": 1,
+  "examples": [
+    {
+      "id": "action-button/tones",
+      "title": "Tones",
+      "component": "ActionButton",
+      "description": "Use `Primary` once per surface, `Danger` only for destructive actions.",
+      "knobs": [
+        {
+          "name": "tone",
+          "type": "select",
+          "options": [
+            "primary",
+            "neutral",
+            "danger"
+          ],
+          "default": "primary"
+        },
+        {
+          "name": "size",
+          "type": "select",
+          "options": [
+            "small",
+            "medium",
+            "large"
+          ],
+          "default": "medium"
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "samples": [
+            "Save changes",
+            "Delete"
+          ],
+          "default": "Save changes"
+        },
+        {
+          "name": "disabled",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "name": "loading",
+          "type": "bool",
+          "default": false
+        }
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "variants": [
+        {
+          "theme": "light",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "is_default": true,
+          "file": "snapshots/action-button/tones/light/default.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "859556dd235a9494"
+        },
+        {
+          "theme": "light",
+          "key": "tone=neutral,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "neutral"
+          },
+          "file": "snapshots/action-button/tones/light/tone=neutral.png",
+          "width": 152,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "70c0ed2634cf9197"
+        },
+        {
+          "theme": "light",
+          "key": "tone=danger,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/light/tone=danger.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "50244c0b51a96ce4"
+        },
+        {
+          "theme": "light",
+          "key": "tone=primary,size=small,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "small",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/size=small.png",
+          "width": 146,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "3436265982f88504"
+        },
+        {
+          "theme": "light",
+          "key": "tone=primary,size=large,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "large",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/size=large.png",
+          "width": 168,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "75b9359fbe94c0d3"
+        },
+        {
+          "theme": "light",
+          "key": "tone=primary,size=medium,label=Delete,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Delete",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/label=Delete.png",
+          "width": 98,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "c62adb1d4b619b6b"
+        },
+        {
+          "theme": "light",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=true,loading=false",
+          "values": {
+            "disabled": true,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/disabled=true.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "df1d57eafd829a42"
+        },
+        {
+          "theme": "light",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=true",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": true,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/loading=true.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "9309bafa7526ef30"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "is_default": true,
+          "file": "snapshots/action-button/tones/dark/default.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "66eff3e8b020aadf"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=neutral,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "neutral"
+          },
+          "file": "snapshots/action-button/tones/dark/tone=neutral.png",
+          "width": 152,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "16c41b0179004c91"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=danger,size=medium,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/dark/tone=danger.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "a829c2e11a34a535"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=small,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "small",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/size=small.png",
+          "width": 146,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "d8124131dfe9db07"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=large,label=Save changes,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "large",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/size=large.png",
+          "width": 168,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "78e460d10c93c040"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=medium,label=Delete,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Delete",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/label=Delete.png",
+          "width": 98,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "aa77d2fb06c73e31"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=true,loading=false",
+          "values": {
+            "disabled": true,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/disabled=true.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "311cdc3187588be7"
+        },
+        {
+          "theme": "dark",
+          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=true",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": true,
+            "size": "medium",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/loading=true.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "53ddf1a9e5fcad39"
+        }
+      ]
+    },
+    {
+      "id": "setting-row/notifications",
+      "title": "Notifications",
+      "component": "SettingRow",
+      "knobs": [
+        {
+          "name": "title",
+          "type": "text",
+          "samples": [
+            "Notifications"
+          ],
+          "default": "Notifications"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "samples": [
+            "Send me a summary every morning."
+          ],
+          "default": "Send me a summary every morning."
+        },
+        {
+          "name": "checked",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "name": "disabled",
+          "type": "bool",
+          "default": false
+        }
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "variants": [
+        {
+          "theme": "light",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=false",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          },
+          "is_default": true,
+          "file": "snapshots/setting-row/notifications/light/default.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "81b3cb08b8d8a57f"
+        },
+        {
+          "theme": "light",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=true",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": true,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/light/disabled=true.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "1d2cca2f5dcf680f"
+        },
+        {
+          "theme": "light",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=false,disabled=false",
+          "values": {
+            "checked": false,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/light/checked=false.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "7de064f1c545e79f"
+        },
+        {
+          "theme": "light",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=false,disabled=true",
+          "values": {
+            "checked": false,
+            "description": "Send me a summary every morning.",
+            "disabled": true,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/light/checked=false,disabled=true.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "4a431840be91fcaf"
+        },
+        {
+          "theme": "dark",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=false",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          },
+          "is_default": true,
+          "file": "snapshots/setting-row/notifications/dark/default.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "5ddcc2827168b186"
+        },
+        {
+          "theme": "dark",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=true",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": true,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/dark/disabled=true.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "4ff5978c35841b26"
+        },
+        {
+          "theme": "dark",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=false,disabled=false",
+          "values": {
+            "checked": false,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/dark/checked=false.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "75a8849ac50477c6"
+        },
+        {
+          "theme": "dark",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=false,disabled=true",
+          "values": {
+            "checked": false,
+            "description": "Send me a summary every morning.",
+            "disabled": true,
+            "title": "Notifications"
+          },
+          "file": "snapshots/setting-row/notifications/dark/checked=false,disabled=true.png",
+          "width": 392,
+          "height": 73,
+          "scale": 2.0,
+          "hash": "43f052b494c0c436"
+        }
+      ]
+    },
+    {
+      "id": "search-field/empty",
+      "title": "Empty and filled",
+      "component": "SearchField",
+      "description": "A stateful example: knobs rebuild the view and its `InputState`.",
+      "knobs": [
+        {
+          "name": "placeholder",
+          "type": "text",
+          "samples": [
+            "Search files…"
+          ],
+          "default": "Search files…"
+        },
+        {
+          "name": "value",
+          "type": "text",
+          "samples": [
+            "",
+            "invoice"
+          ],
+          "default": ""
+        },
+        {
+          "name": "small",
+          "type": "bool",
+          "default": false
+        }
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "variants": [
+        {
+          "theme": "light",
+          "key": "placeholder=Search files…,value=,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": ""
+          },
+          "is_default": true,
+          "file": "snapshots/search-field/empty/light/default.png",
+          "width": 312,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "930e187410882dbb"
+        },
+        {
+          "theme": "light",
+          "key": "placeholder=Search files…,value=,small=true",
+          "values": {
+            "placeholder": "Search files…",
+            "small": true,
+            "value": ""
+          },
+          "file": "snapshots/search-field/empty/light/small=true.png",
+          "width": 312,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "f2fa5bc3e1dc861b"
+        },
+        {
+          "theme": "light",
+          "key": "placeholder=Search files…,value=invoice,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": "invoice"
+          },
+          "file": "snapshots/search-field/empty/light/value=invoice.png",
+          "width": 312,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "f0a56873162dacac"
+        },
+        {
+          "theme": "light",
+          "key": "placeholder=Search files…,value=invoice,small=true",
+          "values": {
+            "placeholder": "Search files…",
+            "small": true,
+            "value": "invoice"
+          },
+          "file": "snapshots/search-field/empty/light/value=invoice,small=true.png",
+          "width": 312,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "a80f6ac0cc6b3d4c"
+        },
+        {
+          "theme": "dark",
+          "key": "placeholder=Search files…,value=,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": ""
+          },
+          "is_default": true,
+          "file": "snapshots/search-field/empty/dark/default.png",
+          "width": 312,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "8cdb1d5345488a92"
+        },
+        {
+          "theme": "dark",
+          "key": "placeholder=Search files…,value=,small=true",
+          "values": {
+            "placeholder": "Search files…",
+            "small": true,
+            "value": ""
+          },
+          "file": "snapshots/search-field/empty/dark/small=true.png",
+          "width": 312,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "a9e31d8ac89ccd52"
+        },
+        {
+          "theme": "dark",
+          "key": "placeholder=Search files…,value=invoice,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": "invoice"
+          },
+          "file": "snapshots/search-field/empty/dark/value=invoice.png",
+          "width": 312,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "e98ba9f7561a37f6"
+        },
+        {
+          "theme": "dark",
+          "key": "placeholder=Search files…,value=invoice,small=true",
+          "values": {
+            "placeholder": "Search files…",
+            "small": true,
+            "value": "invoice"
+          },
+          "file": "snapshots/search-field/empty/dark/value=invoice,small=true.png",
+          "width": 312,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "a186df9fb0d87316"
+        }
+      ]
+    }
+  ]
+}

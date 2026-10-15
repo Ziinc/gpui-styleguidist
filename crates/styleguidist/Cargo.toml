@@ -1,0 +1,38 @@
+[package]
+name = "gpui-styleguidist"
+description = "A living styleguide for GPUI components: an interactive gallery with knobs, built natively and to WebAssembly, plus headless snapshot rendering."
+readme = "../../README.md"
+keywords = ["gpui", "styleguide", "storybook", "wasm", "ui"]
+categories = ["gui", "development-tools", "wasm"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+include = ["src/**", "fonts/**", "Cargo.toml"]
+
+[features]
+default = ["gallery"]
+# The interactive gallery, native and (with `web`) in the browser.
+gallery = ["dep:gpui_platform"]
+# Build the gallery for wasm32-unknown-unknown: the browser platform, hash
+# deep links and a bundled UI font. Has no effect on native targets.
+web = ["gallery", "dep:gpui_web", "dep:wasm-bindgen", "dep:web-sys"]
+# Headless rendering of examples to PNG snapshots (`render` and `check`).
+# Native only; needs GPUI's offscreen renderer: Metal on macOS, WGPU (Vulkan)
+# on Linux.
+render = ["dep:gpui_platform", "gpui/test-support", "gpui_platform/test-support", "dep:image"]
+
+[dependencies]
+gpui.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
+
+[target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
+gpui_platform = { workspace = true, optional = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+gpui_web = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Location", "History", "console"] }

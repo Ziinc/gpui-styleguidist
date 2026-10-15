@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GPUI and lavapipe dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers libvulkan-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libwayland-dev libx11-xcb-dev libxcb1-dev libfontconfig-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- --deny warnings
+      - run: cargo test --workspace
+      - name: Snapshots match
+        run: cargo run -p kit-demo --example styleguide -- check
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: snapshot-mismatches
+          path: target/styleguide-check
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-bindgen-cli
+        run: |
+          version=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+          cargo install wasm-bindgen-cli --version "$version" --locked
+      - name: Build the web styleguide
+        run: cargo run -p cargo-styleguide -- styleguide build -p kit-demo --release --out site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kit-demo-styleguide
+          path: site

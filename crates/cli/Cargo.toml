@@ -1,0 +1,13 @@
+[package]
+name = "cargo-styleguide"
+description = "Builds a gpui-styleguidist styleguide to WebAssembly as a static site."
+keywords = ["gpui", "styleguide", "wasm", "cargo-subcommand"]
+categories = ["development-tools::cargo-plugins", "wasm"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde_json.workspace = true
