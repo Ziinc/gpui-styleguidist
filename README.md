@@ -8,7 +8,8 @@ components with **knobs** for their props, and you get:
   compiles your styleguide to WebAssembly and writes a static site to host
   anywhere. It has a sidebar of components with a filter, and a page per
   component with its description, a props table and live examples. Each
-  example has knobs and "View code". Links look like `#/Button` for a
+  example has knobs and "View code", which shows the code for the current
+  knob values, ready to copy. Links look like `#/Button` for a
   component, or `#!/button/primary?disabled=true` for one example in isolation.
 - **The same styleguide natively.** `cargo run --example styleguide` opens it
   in a window.
@@ -16,7 +17,7 @@ components with **knobs** for their props, and you get:
   theme and knob combination headlessly to PNGs under `styleguide/`.
   `#[preview("button/primary")]` embeds them in an item's docs. The generated
   `styleguide/header.html` turns each preview into a small playground: knobs
-  swap snapshots, "View code" shows the source, and "Open live playground"
+  swap snapshots and rewrite "View code" with a Copy button, and "Open live playground"
   embeds the hosted wasm example in an iframe. docs.rs serves rustdoc pages
   without a Content-Security-Policy, so all of this works there.
 - **Visual regression tests.** `-- check` re-renders the snapshots in CI and
@@ -47,6 +48,11 @@ pub fn styleguide() -> Styleguide {
             example!("button/primary", |knobs, _, _| {
                 Button::new("save")
                     .label(knobs.text("label", "Save"))
+                    .with_size(knobs.pick(
+                        "size",
+                        &[("small", Size::Small), ("medium", Size::Medium)],
+                        "medium",
+                    ))
                     .disabled(knobs.bool("disabled", false))
             })
             .component("Button")
@@ -55,12 +61,17 @@ pub fn styleguide() -> Styleguide {
 }
 ```
 
-- **`example!` keeps the source.** It registers the example and captures
-  the closure body as written, for "View code". `Example::new(…).source(…)`
-  is the macro-free form.
+- **"View code" is code you can paste.** `example!` captures the closure
+  body as written and turns every `knobs.*(…)` read into a slot. "View code"
+  fills each slot with the knob's current value, so with size set to small
+  and disabled on it shows `.with_size(Size::Small).disabled(true)`, and Copy
+  puts that on the clipboard. Read knobs inline where the value is used, and
+  use `pick` for values that aren't strings, numbers or bools: it shows the
+  option's expression as written. `Example::new(…).source(…)` is the
+  macro-free form, which shows fixed text.
 
 - **Knobs are declared by reading them.** They include `bool`, `select`,
-  `text`, `text_samples` and `number`. The gallery shows a control for each
+  `pick`, `text`, `text_samples` and `number`. The gallery shows a control for each
   one, and `render` snapshots every finite combination (bools, selects, text
   samples) up to `variant_limit`.
 - **`example!(…)` is for stateless elements.** `example!(view …)` is for

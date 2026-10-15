@@ -4,6 +4,7 @@ use gpui::{
     IntoElement, ParentElement as _, Pixels, Render, SharedString, Size, Styled as _, Window,
     WindowOptions, div, px, size, white,
 };
+use gpui_styleguidist_manifest::{CodePart, render_code};
 use std::{borrow::Cow, path::PathBuf, rc::Rc, sync::Arc};
 
 pub(crate) type BuildFn = Rc<dyn Fn(Knobs, &mut Window, &mut App) -> AnyView>;
@@ -19,7 +20,7 @@ pub struct Example {
     title: Option<SharedString>,
     component: Option<SharedString>,
     description: SharedString,
-    source: SharedString,
+    code: Vec<CodePart>,
     size: Option<Size<Pixels>>,
     build: BuildFn,
 }
@@ -68,7 +69,7 @@ impl Example {
             title: None,
             component: None,
             description: SharedString::default(),
-            source: SharedString::default(),
+            code: Vec::new(),
             size: None,
             build,
         }
@@ -92,10 +93,19 @@ impl Example {
         self
     }
 
-    /// The code shown under "View code". [`example!`](crate::example) fills it
-    /// from the example's source.
-    pub fn source(mut self, source: impl Into<SharedString>) -> Self {
-        self.source = source.into();
+    /// The code shown under "View code", as is. Prefer
+    /// [`example!`](crate::example), which shows the code with the current
+    /// knob values filled in, ready to copy.
+    pub fn source(mut self, source: impl Into<String>) -> Self {
+        self.code = vec![CodePart::text(source)];
+        self
+    }
+
+    /// The code shown under "View code", with knob slots that show the
+    /// current knob values. [`example!`](crate::example) builds it from the
+    /// example's source.
+    pub fn code(mut self, code: Vec<CodePart>) -> Self {
+        self.code = code;
         self
     }
 
@@ -142,8 +152,14 @@ impl Example {
         &self.description
     }
 
-    pub fn source_text(&self) -> &SharedString {
-        &self.source
+    /// The code template, knob slots included.
+    pub fn code_template(&self) -> &[CodePart] {
+        &self.code
+    }
+
+    /// The code a user would write for the current knob values.
+    pub fn code_for(&self, knobs: &Knobs) -> String {
+        render_code(&self.code, &knobs.specs(), |name| knobs.value(name))
     }
 
     pub(crate) fn fixed_size(&self) -> Option<Size<Pixels>> {
@@ -360,6 +376,11 @@ impl Styleguide {
         #[cfg(all(feature = "web", target_family = "wasm"))]
         fonts.push(Cow::Borrowed(include_bytes!(
             "../fonts/IBMPlexSans-Regular.ttf"
+        )));
+        // "View code" and the props table use it, and few systems have it.
+        #[cfg(feature = "gallery")]
+        fonts.push(Cow::Borrowed(include_bytes!(
+            "../fonts/JetBrainsMono-Regular.ttf"
         )));
         if !fonts.is_empty()
             && let Err(error) = cx.text_system().add_fonts(fonts)

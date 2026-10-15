@@ -8,6 +8,8 @@
 //!   snapshot becomes a visible note in the docs, never a build error, so
 //!   docs.rs builds cannot break on it.
 
+mod code;
+
 use base64::Engine as _;
 use gpui_styleguidist_manifest::{self as manifest, ExampleEntry, Manifest};
 use proc_macro::TokenStream;
@@ -21,29 +23,50 @@ use syn::{
 };
 
 /// `example!("button/primary", |knobs, window, cx| { … })` builds an
-/// [`Example`] whose "View code" shows the closure body as written.
+/// [`Example`] whose "View code" shows the closure body as written, with every
+/// `knobs.*(…)` read replaced by the knob's current value, ready to copy.
 /// `example!(view "input/empty", |knobs, window, cx| { … })` builds a stateful
 /// one with `Example::view`.
 #[proc_macro]
 pub fn example(input: TokenStream) -> TokenStream {
     let ExampleArgs { view, id, closure } = parse_macro_input!(input as ExampleArgs);
-    let source = match &closure {
-        Expr::Closure(closure) => match closure.body.as_ref() {
-            Expr::Block(block) => block
-                .block
-                .brace_token
-                .span
-                .join()
-                .source_text()
-                .map(|text| dedent(text.trim_start_matches('{').trim_end_matches('}'))),
-            body => Some(quote!(#body).to_string()),
-        },
-        _ => None,
-    }
-    .unwrap_or_default();
+    let (source, knobs) = match &closure {
+        Expr::Closure(closure) => {
+            let knobs = closure.inputs.first().and_then(|input| match input {
+                syn::Pat::Ident(pat) => Some(pat.ident.to_string()),
+                syn::Pat::Type(pat) => match pat.pat.as_ref() {
+                    syn::Pat::Ident(pat) => Some(pat.ident.to_string()),
+                    _ => None,
+                },
+                _ => None,
+            });
+            let source = match closure.body.as_ref() {
+                Expr::Block(block) => block
+                    .block
+                    .brace_token
+                    .span
+                    .join()
+                    .source_text()
+                    .map(|text| dedent(text.trim_start_matches('{').trim_end_matches('}'))),
+                body => Some(quote!(#body).to_string()),
+            };
+            (source.unwrap_or_default(), knobs)
+        }
+        _ => (String::new(), None),
+    };
+    let parts = code::parts(&source, knobs.as_deref())
+        .into_iter()
+        .map(|part| match part {
+            code::Part::Text(text) => quote!(::gpui_styleguidist::manifest::CodePart::text(#text)),
+            code::Part::Knob { name, options } => {
+                let options = options.iter().map(|(label, code)| quote!((#label, #code)));
+                quote!(::gpui_styleguidist::manifest::CodePart::knob(#name, [#(#options),*]))
+            }
+        });
     let constructor = if view { quote!(view) } else { quote!(new) };
     quote! {
-        ::gpui_styleguidist::Example::#constructor(#id, #closure).source(#source)
+        ::gpui_styleguidist::Example::#constructor(#id, #closure)
+            .code(::std::vec![#(#parts),*])
     }
     .into()
 }
@@ -240,9 +263,10 @@ fn html(dir: &Path, args: &PreviewArgs) -> Result<String, String> {
         }
         out.push_str("</div></details>\n");
     }
-    if !example.source.is_empty() {
+    if !example.code.is_empty() {
+        let code = manifest::render_code(&example.code, &example.knobs, |_| None);
         // Newlines inside an HTML block are fine; blank lines would end it.
-        let code = escape(&example.source).replace("\n\n", "\n&#32;\n");
+        let code = escape(&code).replace("\n\n", "\n&#32;\n");
         out.push_str(&format!(
             "<details class=\"gsg-code\"><summary>View code</summary><pre><code>{code}</code></pre></details>\n"
         ));
@@ -254,6 +278,7 @@ fn html(dir: &Path, args: &PreviewArgs) -> Result<String, String> {
         "themes": if args.variants { example.themes.clone() } else { vec![theme.clone()] },
         "knobs": if args.variants { serde_json::to_value(&example.knobs).unwrap() } else { serde_json::json!([]) },
         "playground": manifest.playground_url,
+        "code": if args.variants { serde_json::to_value(&example.code).unwrap() } else { serde_json::json!([]) },
     });
     out.push_str(&format!(
         "<script type=\"application/json\" class=\"gsg-data\">{}</script>\n",

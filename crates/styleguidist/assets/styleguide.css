@@ -6,6 +6,8 @@
 .gpui-styleguide .gsg-grid{display:flex;flex-wrap:wrap;gap:.8em;margin-top:.6em}
 .gpui-styleguide .gsg-grid figure{margin:0}
 .gpui-styleguide .gsg-grid figcaption{font-size:.8em;font-family:var(--mono-font,monospace);opacity:.75}
+.gpui-styleguide .gsg-code{position:relative}
+.gpui-styleguide .gsg-copy{position:absolute;top:2.4em;right:1.4em;font:inherit;font-size:.8em;cursor:pointer;opacity:.75}
 .gpui-styleguide .gsg-code pre{margin:.5em 0 .2em;padding:.8em;background:var(--code-block-background-color,#f5f5f5);border-radius:4px;overflow-x:auto}
 .gpui-styleguide .gsg-knobs{display:flex;flex-wrap:wrap;gap:.4em 1.2em;align-items:center;border-top:1px solid var(--border-color,#ddd);padding:.5em .8em;font-size:.9em}
 .gpui-styleguide .gsg-knobs label{display:inline-flex;gap:.4em;align-items:center;white-space:nowrap}

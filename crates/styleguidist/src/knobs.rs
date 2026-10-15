@@ -68,6 +68,24 @@ impl Knobs {
         }
     }
 
+    /// One of `options`, each a label and the value it stands for; `default`
+    /// is a label. With [`example!`](crate::example), "View code" shows the
+    /// picked value's expression as written, such as `Tone::Danger`.
+    ///
+    /// ```ignore
+    /// .tone(knobs.pick("tone", &[("primary", Tone::Primary), ("danger", Tone::Danger)], "primary"))
+    /// ```
+    pub fn pick<T: Clone>(&self, name: &str, options: &[(&str, T)], default: &str) -> T {
+        let labels: Vec<&str> = options.iter().map(|(label, _)| *label).collect();
+        let label = self.select(name, &labels, default);
+        options
+            .iter()
+            .find(|(option, _)| *option == label)
+            .or(options.first())
+            .map(|(_, value)| value.clone())
+            .expect("knob `pick` needs at least one option")
+    }
+
     /// Free text, editable in the gallery. Snapshots show only `default`; use
     /// [`Knobs::text_samples`] to render more.
     pub fn text(&self, name: &str, default: &str) -> SharedString {
@@ -240,6 +258,15 @@ mod tests {
         );
         assert_eq!(knobs.specs().len(), 3);
         assert_eq!(knobs.value("disabled"), Some(KnobValue::Bool(false)));
+    }
+
+    #[test]
+    fn pick_returns_the_value_for_the_selected_label() {
+        let knobs = Knobs::default();
+        let options = [("small", 1), ("large", 2)];
+        assert_eq!(knobs.pick("size", &options, "large"), 2);
+        knobs.set("size", KnobValue::Text("small".into()));
+        assert_eq!(knobs.pick("size", &options, "large"), 1);
     }
 
     #[test]

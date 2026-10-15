@@ -47,9 +47,10 @@ pub struct ExampleEntry {
     pub component: Option<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    /// The example's source, captured by `example!`.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub source: String,
+    /// The example's code with each knob read left as a slot, captured by
+    /// `example!`. [`render_code`] fills the slots with knob values.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub code: Vec<CodePart>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub knobs: Vec<KnobEntry>,
     pub themes: Vec<String>,
@@ -112,6 +113,15 @@ impl KnobValue {
             KnobValue::Text(value) => value.clone(),
         }
     }
+
+    /// The value as a Rust literal: `true`, `1.5`, `"Delete"`.
+    pub fn literal(&self) -> String {
+        match self {
+            KnobValue::Bool(value) => value.to_string(),
+            KnobValue::Number(value) => format!("{value:?}"),
+            KnobValue::Text(value) => format!("{value:?}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -132,6 +142,75 @@ pub struct VariantEntry {
     pub scale: f32,
     /// FNV-1a hash of the RGBA pixels, so pixel changes show in diffs.
     pub hash: String,
+}
+
+/// A piece of an example's code: verbatim text, or the slot a knob read
+/// occupied in the source.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum CodePart {
+    Text {
+        text: String,
+    },
+    Knob {
+        knob: String,
+        /// The Rust expression for each option of a `pick` knob, by label.
+        /// Empty for other knobs, whose values print as literals.
+        #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+        code: BTreeMap<String, String>,
+    },
+}
+
+impl CodePart {
+    pub fn text(text: impl Into<String>) -> Self {
+        CodePart::Text { text: text.into() }
+    }
+
+    pub fn knob<'a>(
+        knob: impl Into<String>,
+        code: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Self {
+        CodePart::Knob {
+            knob: knob.into(),
+            code: code
+                .into_iter()
+                .map(|(label, code)| (label.to_string(), code.to_string()))
+                .collect(),
+        }
+    }
+}
+
+/// The code a user would write for the given knob values: every knob slot
+/// becomes the value's Rust expression, such as `true`, `"Delete"` or
+/// `Tone::Danger`. `value` returns a knob's current value, or `None` for its
+/// default.
+pub fn render_code(
+    parts: &[CodePart],
+    knobs: &[KnobEntry],
+    value: impl Fn(&str) -> Option<KnobValue>,
+) -> String {
+    let mut out = String::new();
+    for part in parts {
+        match part {
+            CodePart::Text { text } => out.push_str(text),
+            CodePart::Knob { knob, code } => {
+                let value = value(knob).or_else(|| {
+                    knobs
+                        .iter()
+                        .find(|entry| &entry.name == knob)
+                        .map(|entry| entry.default.clone())
+                });
+                match value {
+                    Some(KnobValue::Text(label)) if !code.is_empty() => {
+                        out.push_str(code.get(&label).unwrap_or(&label))
+                    }
+                    Some(value) => out.push_str(&value.literal()),
+                    None => out.push_str(knob),
+                }
+            }
+        }
+    }
+    out
 }
 
 /// Builds the canonical variant key from knob values in declaration order.
@@ -162,6 +241,55 @@ mod tests {
             r#"{"name":"variant","type":"select","options":["primary","ghost"],"default":"primary"}"#
         );
         assert_eq!(serde_json::from_str::<KnobEntry>(&json).unwrap(), knob);
+    }
+
+    #[test]
+    fn code_fills_knob_slots_with_rust_expressions() {
+        let knobs = [
+            KnobEntry {
+                name: "tone".into(),
+                control: KnobControl::Select {
+                    options: vec!["primary".into(), "danger".into()],
+                },
+                default: KnobValue::Text("primary".into()),
+            },
+            KnobEntry {
+                name: "label".into(),
+                control: KnobControl::Text { samples: vec![] },
+                default: KnobValue::Text("Save".into()),
+            },
+            KnobEntry {
+                name: "width".into(),
+                control: KnobControl::Number {
+                    min: 0.,
+                    max: 10.,
+                    step: 1.,
+                },
+                default: KnobValue::Number(2.),
+            },
+        ];
+        let parts = [
+            CodePart::text("Button::new("),
+            CodePart::knob("label", []),
+            CodePart::text(").tone("),
+            CodePart::knob(
+                "tone",
+                [("primary", "Tone::Primary"), ("danger", "Tone::Danger")],
+            ),
+            CodePart::text(").width("),
+            CodePart::knob("width", []),
+            CodePart::text(")"),
+        ];
+        let code = render_code(&parts, &knobs, |name| {
+            (name == "tone").then(|| KnobValue::Text("danger".into()))
+        });
+        assert_eq!(code, r#"Button::new("Save").tone(Tone::Danger).width(2.0)"#);
+        let json = serde_json::to_string(&parts[..2]).unwrap();
+        assert_eq!(json, r#"[{"text":"Button::new("},{"knob":"label"}]"#);
+        assert_eq!(
+            serde_json::from_str::<Vec<CodePart>>(&json).unwrap(),
+            parts[..2]
+        );
     }
 
     #[test]

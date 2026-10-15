@@ -9,11 +9,11 @@
 
 use crate::{Example, Frame, Knobs, Styleguide, preview::Canvas};
 use gpui::{
-    AnyView, App, AppContext as _, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight,
-    HighlightStyle, Hsla, InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement as _, Render, SharedString, StatefulInteractiveElement as _, Styled as _,
-    StyledText, WeakEntity, Window, WindowBounds, WindowOptions, div, prelude::FluentBuilder as _,
-    px, rgb, size,
+    AnyView, App, AppContext as _, Bounds, ClipboardItem, Context, Entity, FocusHandle, Focusable,
+    FontWeight, HighlightStyle, Hsla, InteractiveElement as _, IntoElement, KeyDownEvent,
+    MouseButton, ParentElement as _, Render, SharedString, StatefulInteractiveElement as _,
+    Styled as _, StyledText, WeakEntity, Window, WindowBounds, WindowOptions, div,
+    prelude::FluentBuilder as _, px, rgb, size,
 };
 use gpui_styleguidist_manifest::{KnobControl, KnobEntry, KnobValue};
 use std::{collections::BTreeMap, ops::Range, rc::Rc};
@@ -574,6 +574,7 @@ struct ExampleBlock {
     isolated: bool,
     show_code: bool,
     show_knobs: bool,
+    copied: bool,
     gallery: WeakEntity<Gallery>,
 }
 
@@ -604,6 +605,7 @@ impl ExampleBlock {
             isolated,
             show_code: false,
             show_knobs: true,
+            copied: false,
             gallery,
         }
     }
@@ -614,6 +616,7 @@ impl ExampleBlock {
 
     fn knobs_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.preview = build_preview(&self.guide, self.index, self.knobs.clone(), window, cx);
+        self.copied = false;
         // Keep an isolated example's URL in step, so it can be shared.
         #[cfg(all(feature = "web", target_family = "wasm"))]
         if self.isolated
@@ -659,7 +662,10 @@ impl Render for ExampleBlock {
         let palette = palette();
         let example = self.example();
         let id = example.id().clone();
-        let source = example.source_text().clone();
+        let has_code = !example.code_template().is_empty();
+        // Knob slots fill in once the preview has declared its knobs, which
+        // it has by the time "View code" can be opened.
+        let code: SharedString = example.code_for(&self.knobs).into();
         let has_knobs = !self.knobs.specs().is_empty();
         div()
             .flex()
@@ -718,7 +724,7 @@ impl Render for ExampleBlock {
                             .rounded_t(px(3.))
                             .child(self.preview.clone()),
                     )
-                    .when(has_knobs || !source.is_empty(), |this| {
+                    .when(has_knobs || has_code, |this| {
                         this.child(
                             div()
                                 .flex()
@@ -736,7 +742,7 @@ impl Render for ExampleBlock {
                                             })),
                                     )
                                 })
-                                .when(!source.is_empty(), |this| {
+                                .when(has_code, |this| {
                                     this.child(
                                         tab("styleguide-code-tab", "View code", self.show_code)
                                             .on_click(cx.listener(|this, _, _, cx| {
@@ -750,8 +756,28 @@ impl Render for ExampleBlock {
                     // After the preview, so it renders once the preview has
                     // registered its knobs this frame.
                     .when(self.show_knobs, |this| this.child(self.panel.clone()))
-                    .when(self.show_code && !source.is_empty(), |this| {
-                        this.child(code_block(&source))
+                    .when(self.show_code && has_code, |this| {
+                        let copied = self.copied;
+                        this.child(
+                            div().relative().child(code_block(&code)).child(
+                                div().absolute().top_3().right_4().child(
+                                    link(
+                                        "styleguide-copy",
+                                        if copied { "Copied" } else { "Copy" },
+                                        palette.light,
+                                    )
+                                    .on_click(cx.listener(
+                                        move |this, _, _, cx| {
+                                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                                code.to_string(),
+                                            ));
+                                            this.copied = true;
+                                            cx.notify();
+                                        },
+                                    )),
+                                ),
+                            ),
+                        )
                     }),
             )
     }

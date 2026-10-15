@@ -23,7 +23,7 @@ use gpui_kit::{
     },
     *,
 };
-use gpui_styleguidist::{Knobs, Styleguide, example};
+use gpui_styleguidist::{Styleguide, example};
 
 /// What an [`ActionButton`] does, which decides its emphasis.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,14 +35,6 @@ pub enum Tone {
     Neutral,
     /// Actions that destroy data.
     Danger,
-}
-
-impl Tone {
-    pub const ALL: [(&'static str, Tone); 3] = [
-        ("primary", Tone::Primary),
-        ("neutral", Tone::Neutral),
-        ("danger", Tone::Danger),
-    ];
 }
 
 /// A labelled command button whose emphasis follows its [`Tone`].
@@ -175,7 +167,7 @@ impl RenderOnce for SettingRow {
 #[gpui_styleguidist::preview("search-field/empty")]
 pub struct SearchField {
     input: Entity<InputState>,
-    knobs: Knobs,
+    small: bool,
 }
 
 impl SearchField {
@@ -192,14 +184,19 @@ impl SearchField {
         });
         Self {
             input,
-            knobs: Knobs::default(),
+            small: false,
         }
+    }
+
+    pub fn small(mut self, small: bool) -> Self {
+        self.small = small;
+        self
     }
 }
 
 impl Render for SearchField {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        let small = self.knobs.bool("small", false);
+        let small = self.small;
         div().w(px(280.)).child(
             Input::new(&self.input)
                 .cleanable(true)
@@ -253,22 +250,28 @@ pub fn styleguide() -> Styleguide {
         )
         .example(
             example!("action-button/tones", |knobs, _, _| {
-                let tone = knobs.select("tone", &["primary", "neutral", "danger"], "primary");
-                let tone = Tone::ALL
-                    .iter()
-                    .find(|(name, _)| *name == tone)
-                    .map_or(Tone::Primary, |(_, tone)| *tone);
-                let size = match knobs.select("size", &["small", "medium", "large"], "medium") {
-                    "small" => Size::Small,
-                    "large" => Size::Large,
-                    _ => Size::Medium,
-                };
                 ActionButton::new(
                     "action",
                     knobs.text_samples("label", &["Save changes", "Delete"]),
                 )
-                .tone(tone)
-                .size(size)
+                .tone(knobs.pick(
+                    "tone",
+                    &[
+                        ("primary", Tone::Primary),
+                        ("neutral", Tone::Neutral),
+                        ("danger", Tone::Danger),
+                    ],
+                    "primary",
+                ))
+                .size(knobs.pick(
+                    "size",
+                    &[
+                        ("small", Size::Small),
+                        ("medium", Size::Medium),
+                        ("large", Size::Large),
+                    ],
+                    "medium",
+                ))
                 .disabled(knobs.bool("disabled", false))
                 .loading(knobs.bool("loading", false))
             })
@@ -319,12 +322,14 @@ pub fn styleguide() -> Styleguide {
         )
         .example(
             example!(view "search-field/empty", |knobs, window, cx| {
-                let placeholder = knobs.text("placeholder", "Search files…");
-                let value = knobs.text_samples("value", &["", "invoice"]);
                 cx.new(|cx| {
-                    let mut field = SearchField::new(&placeholder, &value, window, cx);
-                    field.knobs = knobs.clone();
-                    field
+                    SearchField::new(
+                        &knobs.text("placeholder", "Search files…"),
+                        &knobs.text_samples("value", &["", "invoice"]),
+                        window,
+                        cx,
+                    )
+                    .small(knobs.bool("small", false))
                 })
             })
             .component("SearchField")

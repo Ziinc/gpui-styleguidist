@@ -122,7 +122,7 @@ impl<'a> Renderer<'a> {
             title: example.display_title().to_string(),
             component: example.component_name().map(|name| name.to_string()),
             description: example.description_text().to_string(),
-            source: example.source_text().to_string(),
+            code: example.code_template().to_vec(),
             knobs: knob_specs,
             themes: self
                 .guide

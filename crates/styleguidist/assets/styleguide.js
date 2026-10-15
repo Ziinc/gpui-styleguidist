@@ -1,10 +1,40 @@
 // gpui-styleguidist: turns each pre-rendered preview into a small playground.
-// Knobs with pre-rendered values swap snapshots; "Open live playground"
-// embeds the hosted wasm styleguide, where every knob and interaction is live.
+// Knobs with pre-rendered values swap snapshots and rewrite "View code" with
+// the chosen values; "Open live playground" embeds the hosted wasm
+// styleguide, where every knob and interaction is live.
 (function () {
   "use strict";
   function text(value) {
     return typeof value === "boolean" || typeof value === "number" ? String(value) : value;
+  }
+  // A knob value as the Rust expression "View code" shows for it.
+  function literal(part, value) {
+    if (part.code && typeof value === "string" && part.code[value] !== undefined) {
+      return part.code[value];
+    }
+    if (typeof value === "boolean") return String(value);
+    if (typeof value === "number") return Number.isInteger(value) ? value + ".0" : String(value);
+    return JSON.stringify(value);
+  }
+  function copyButton(code) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "gsg-copy";
+    button.textContent = "Copy";
+    button.addEventListener("click", function () {
+      var done = function () {
+        button.textContent = "Copied";
+        setTimeout(function () { button.textContent = "Copy"; }, 1500);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(code.textContent).then(done, function () {
+          getSelection().selectAllChildren(code);
+        });
+      } else {
+        getSelection().selectAllChildren(code);
+      }
+    });
+    return button;
   }
   function enhance(root) {
     var data;
@@ -14,6 +44,8 @@
       return;
     }
     var main = root.querySelector(".gsg-preview img");
+    var code = root.querySelector(".gsg-code code");
+    if (code) code.parentNode.parentNode.insertBefore(copyButton(code), code.parentNode);
     var images = {};
     root.querySelectorAll("img[data-key]").forEach(function (img) {
       images[img.dataset.theme + "\u0000" + img.dataset.key] = img;
@@ -34,7 +66,16 @@
         })
         .join(",");
     }
+    function updateCode() {
+      if (!code || !data.code || !data.code.length) return;
+      code.textContent = data.code
+        .map(function (part) {
+          return part.text !== undefined ? part.text : literal(part, state.values[part.knob]);
+        })
+        .join("");
+    }
     function update() {
+      updateCode();
       var img = images[state.theme + "\u0000" + key()];
       if (img) {
         main.src = img.src;

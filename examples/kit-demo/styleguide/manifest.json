@@ -7,8 +7,61 @@
       "title": "Playground",
       "component": "ActionButton",
       "description": "Every prop as a knob.",
-      "source": "let tone = knobs.select(\"tone\", &[\"primary\", \"neutral\", \"danger\"], \"primary\");\nlet tone = Tone::ALL\n    .iter()\n    .find(|(name, _)| *name == tone)\n    .map_or(Tone::Primary, |(_, tone)| *tone);\nlet size = match knobs.select(\"size\", &[\"small\", \"medium\", \"large\"], \"medium\") {\n    \"small\" => Size::Small,\n    \"large\" => Size::Large,\n    _ => Size::Medium,\n};\nActionButton::new(\n    \"action\",\n    knobs.text_samples(\"label\", &[\"Save changes\", \"Delete\"]),\n)\n.tone(tone)\n.size(size)\n.disabled(knobs.bool(\"disabled\", false))\n.loading(knobs.bool(\"loading\", false))",
+      "code": [
+        {
+          "text": "ActionButton::new(\n    \"action\",\n    "
+        },
+        {
+          "knob": "label"
+        },
+        {
+          "text": ",\n)\n.tone("
+        },
+        {
+          "knob": "tone",
+          "code": {
+            "danger": "Tone::Danger",
+            "neutral": "Tone::Neutral",
+            "primary": "Tone::Primary"
+          }
+        },
+        {
+          "text": ")\n.size("
+        },
+        {
+          "knob": "size",
+          "code": {
+            "large": "Size::Large",
+            "medium": "Size::Medium",
+            "small": "Size::Small"
+          }
+        },
+        {
+          "text": ")\n.disabled("
+        },
+        {
+          "knob": "disabled"
+        },
+        {
+          "text": ")\n.loading("
+        },
+        {
+          "knob": "loading"
+        },
+        {
+          "text": ")"
+        }
+      ],
       "knobs": [
+        {
+          "name": "label",
+          "type": "text",
+          "samples": [
+            "Save changes",
+            "Delete"
+          ],
+          "default": "Save changes"
+        },
         {
           "name": "tone",
           "type": "select",
@@ -30,15 +83,6 @@
           "default": "medium"
         },
         {
-          "name": "label",
-          "type": "text",
-          "samples": [
-            "Save changes",
-            "Delete"
-          ],
-          "default": "Save changes"
-        },
-        {
           "name": "disabled",
           "type": "bool",
           "default": false
@@ -56,7 +100,7 @@
       "variants": [
         {
           "theme": "light",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=false",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=false",
           "values": {
             "disabled": false,
             "label": "Save changes",
@@ -73,71 +117,7 @@
         },
         {
           "theme": "light",
-          "key": "tone=neutral,size=medium,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "medium",
-            "tone": "neutral"
-          },
-          "file": "snapshots/action-button/tones/light/tone=neutral.png",
-          "width": 152,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "70c0ed2634cf9197"
-        },
-        {
-          "theme": "light",
-          "key": "tone=danger,size=medium,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "medium",
-            "tone": "danger"
-          },
-          "file": "snapshots/action-button/tones/light/tone=danger.png",
-          "width": 150,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "50244c0b51a96ce4"
-        },
-        {
-          "theme": "light",
-          "key": "tone=primary,size=small,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "small",
-            "tone": "primary"
-          },
-          "file": "snapshots/action-button/tones/light/size=small.png",
-          "width": 146,
-          "height": 56,
-          "scale": 2.0,
-          "hash": "3436265982f88504"
-        },
-        {
-          "theme": "light",
-          "key": "tone=primary,size=large,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "large",
-            "tone": "primary"
-          },
-          "file": "snapshots/action-button/tones/light/size=large.png",
-          "width": 168,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "75b9359fbe94c0d3"
-        },
-        {
-          "theme": "light",
-          "key": "tone=primary,size=medium,label=Delete,disabled=false,loading=false",
+          "key": "label=Delete,tone=primary,size=medium,disabled=false,loading=false",
           "values": {
             "disabled": false,
             "label": "Delete",
@@ -153,7 +133,71 @@
         },
         {
           "theme": "light",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=true,loading=false",
+          "key": "label=Save changes,tone=neutral,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "neutral"
+          },
+          "file": "snapshots/action-button/tones/light/tone=neutral.png",
+          "width": 152,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "70c0ed2634cf9197"
+        },
+        {
+          "theme": "light",
+          "key": "label=Save changes,tone=danger,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/light/tone=danger.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "50244c0b51a96ce4"
+        },
+        {
+          "theme": "light",
+          "key": "label=Save changes,tone=primary,size=small,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "small",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/size=small.png",
+          "width": 146,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "3436265982f88504"
+        },
+        {
+          "theme": "light",
+          "key": "label=Save changes,tone=primary,size=large,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "large",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/light/size=large.png",
+          "width": 168,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "75b9359fbe94c0d3"
+        },
+        {
+          "theme": "light",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=true,loading=false",
           "values": {
             "disabled": true,
             "label": "Save changes",
@@ -169,7 +213,7 @@
         },
         {
           "theme": "light",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=true",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=true",
           "values": {
             "disabled": false,
             "label": "Save changes",
@@ -185,7 +229,7 @@
         },
         {
           "theme": "dark",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=false",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=false",
           "values": {
             "disabled": false,
             "label": "Save changes",
@@ -202,71 +246,7 @@
         },
         {
           "theme": "dark",
-          "key": "tone=neutral,size=medium,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "medium",
-            "tone": "neutral"
-          },
-          "file": "snapshots/action-button/tones/dark/tone=neutral.png",
-          "width": 152,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "16c41b0179004c91"
-        },
-        {
-          "theme": "dark",
-          "key": "tone=danger,size=medium,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "medium",
-            "tone": "danger"
-          },
-          "file": "snapshots/action-button/tones/dark/tone=danger.png",
-          "width": 150,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "a829c2e11a34a535"
-        },
-        {
-          "theme": "dark",
-          "key": "tone=primary,size=small,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "small",
-            "tone": "primary"
-          },
-          "file": "snapshots/action-button/tones/dark/size=small.png",
-          "width": 146,
-          "height": 56,
-          "scale": 2.0,
-          "hash": "d8124131dfe9db07"
-        },
-        {
-          "theme": "dark",
-          "key": "tone=primary,size=large,label=Save changes,disabled=false,loading=false",
-          "values": {
-            "disabled": false,
-            "label": "Save changes",
-            "loading": false,
-            "size": "large",
-            "tone": "primary"
-          },
-          "file": "snapshots/action-button/tones/dark/size=large.png",
-          "width": 168,
-          "height": 64,
-          "scale": 2.0,
-          "hash": "78e460d10c93c040"
-        },
-        {
-          "theme": "dark",
-          "key": "tone=primary,size=medium,label=Delete,disabled=false,loading=false",
+          "key": "label=Delete,tone=primary,size=medium,disabled=false,loading=false",
           "values": {
             "disabled": false,
             "label": "Delete",
@@ -282,7 +262,71 @@
         },
         {
           "theme": "dark",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=true,loading=false",
+          "key": "label=Save changes,tone=neutral,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "neutral"
+          },
+          "file": "snapshots/action-button/tones/dark/tone=neutral.png",
+          "width": 152,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "16c41b0179004c91"
+        },
+        {
+          "theme": "dark",
+          "key": "label=Save changes,tone=danger,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/dark/tone=danger.png",
+          "width": 150,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "a829c2e11a34a535"
+        },
+        {
+          "theme": "dark",
+          "key": "label=Save changes,tone=primary,size=small,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "small",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/size=small.png",
+          "width": 146,
+          "height": 56,
+          "scale": 2.0,
+          "hash": "d8124131dfe9db07"
+        },
+        {
+          "theme": "dark",
+          "key": "label=Save changes,tone=primary,size=large,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "large",
+            "tone": "primary"
+          },
+          "file": "snapshots/action-button/tones/dark/size=large.png",
+          "width": 168,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "78e460d10c93c040"
+        },
+        {
+          "theme": "dark",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=true,loading=false",
           "values": {
             "disabled": true,
             "label": "Save changes",
@@ -298,7 +342,7 @@
         },
         {
           "theme": "dark",
-          "key": "tone=primary,size=medium,label=Save changes,disabled=false,loading=true",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=true",
           "values": {
             "disabled": false,
             "label": "Save changes",
@@ -319,7 +363,11 @@
       "title": "Tones side by side",
       "component": "ActionButton",
       "description": "Use Primary once per surface.",
-      "source": "h_flex()\n    .gap_2()\n    .child(ActionButton::new(\"primary\", \"Publish\").tone(Tone::Primary))\n    .child(ActionButton::new(\"neutral\", \"Save draft\").tone(Tone::Neutral))\n    .child(ActionButton::new(\"danger\", \"Delete\").tone(Tone::Danger))",
+      "code": [
+        {
+          "text": "h_flex()\n    .gap_2()\n    .child(ActionButton::new(\"primary\", \"Publish\").tone(Tone::Primary))\n    .child(ActionButton::new(\"neutral\", \"Save draft\").tone(Tone::Neutral))\n    .child(ActionButton::new(\"danger\", \"Delete\").tone(Tone::Danger))"
+        }
+      ],
       "themes": [
         "light",
         "dark"
@@ -351,7 +399,35 @@
       "id": "setting-row/notifications",
       "title": "Notifications",
       "component": "SettingRow",
-      "source": "SettingRow::new(\"notifications\", knobs.text(\"title\", \"Notifications\"))\n    .description(knobs.text(\"description\", \"Send me a summary every morning.\"))\n    .checked(knobs.bool(\"checked\", true))\n    .disabled(knobs.bool(\"disabled\", false))",
+      "code": [
+        {
+          "text": "SettingRow::new(\"notifications\", "
+        },
+        {
+          "knob": "title"
+        },
+        {
+          "text": ")\n    .description("
+        },
+        {
+          "knob": "description"
+        },
+        {
+          "text": ")\n    .checked("
+        },
+        {
+          "knob": "checked"
+        },
+        {
+          "text": ")\n    .disabled("
+        },
+        {
+          "knob": "disabled"
+        },
+        {
+          "text": ")"
+        }
+      ],
       "knobs": [
         {
           "name": "title",
@@ -513,7 +589,11 @@
       "id": "setting-row/list",
       "title": "A settings list",
       "component": "SettingRow",
-      "source": "v_flex()\n    .gap_4()\n    .child(\n        SettingRow::new(\"sync\", \"Sync\")\n            .description(\"Keep files on every device.\")\n            .checked(true),\n    )\n    .child(SettingRow::new(\"beta\", \"Beta features\").checked(false))\n    .child(\n        SettingRow::new(\"admin\", \"Admin mode\")\n            .description(\"Managed by your organization.\")\n            .disabled(true),\n    )",
+      "code": [
+        {
+          "text": "v_flex()\n    .gap_4()\n    .child(\n        SettingRow::new(\"sync\", \"Sync\")\n            .description(\"Keep files on every device.\")\n            .checked(true),\n    )\n    .child(SettingRow::new(\"beta\", \"Beta features\").checked(false))\n    .child(\n        SettingRow::new(\"admin\", \"Admin mode\")\n            .description(\"Managed by your organization.\")\n            .disabled(true),\n    )"
+        }
+      ],
       "themes": [
         "light",
         "dark"
@@ -546,7 +626,29 @@
       "title": "Empty and filled",
       "component": "SearchField",
       "description": "Changing a knob rebuilds the view and its InputState. Click it and type.",
-      "source": "let placeholder = knobs.text(\"placeholder\", \"Search files…\");\nlet value = knobs.text_samples(\"value\", &[\"\", \"invoice\"]);\ncx.new(|cx| {\n    let mut field = SearchField::new(&placeholder, &value, window, cx);\n    field.knobs = knobs.clone();\n    field\n})",
+      "code": [
+        {
+          "text": "cx.new(|cx| {\n    SearchField::new(\n        &"
+        },
+        {
+          "knob": "placeholder"
+        },
+        {
+          "text": ",\n        &"
+        },
+        {
+          "knob": "value"
+        },
+        {
+          "text": ",\n        window,\n        cx,\n    )\n    .small("
+        },
+        {
+          "knob": "small"
+        },
+        {
+          "text": ")\n})"
+        }
+      ],
       "knobs": [
         {
           "name": "placeholder",
