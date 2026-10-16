@@ -796,6 +796,7 @@ name = "cargo-styleguide"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "notify",
  "serde_json",
 ]
 

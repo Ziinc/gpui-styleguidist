@@ -7,7 +7,11 @@
 //! `#/Component` opens a component and `#!/example-id?knob=value` opens one
 //! example in isolation (what rustdoc previews embed as their playground).
 
-use crate::{Example, Frame, Knobs, Styleguide, preview::Canvas};
+use crate::{
+    Example, Frame, Knobs, Styleguide,
+    preview::Canvas,
+    store::{self, KnobStore},
+};
 use gpui::{
     AnyView, App, AppContext as _, Bounds, ClipboardItem, Context, Entity, FocusHandle, Focusable,
     FontWeight, HighlightStyle, Hsla, InteractiveElement as _, IntoElement, KeyDownEvent,
@@ -139,6 +143,16 @@ impl Gallery {
 
     fn navigate(&mut self, route: Route, window: &mut Window, cx: &mut Context<Self>) {
         let gallery = cx.weak_entity();
+        // An isolated example's link carries its saved knobs, with the link's
+        // own values on top, so it can be shared as it looks.
+        let route = match route {
+            Route::Isolated { id, knobs } => {
+                let mut saved = knob_store(cx).saved(&id);
+                saved.extend(knobs);
+                Route::Isolated { id, knobs: saved }
+            }
+            route => route,
+        };
         self.content = match &route {
             Route::Component(name) => self
                 .groups
@@ -158,19 +172,17 @@ impl Gallery {
                     .position(|example| example.id() == id);
                 index.map(|index| {
                     let guide = self.guide.clone();
-                    let knobs = Knobs::with_raw(knobs.clone());
+                    let knobs = knob_store(cx).knobs(id, knobs);
                     cx.new(|cx| ExampleBlock::new(guide, index, knobs, true, gallery, window, cx))
                         .into()
                 })
             }
         };
-        #[cfg(all(feature = "web", target_family = "wasm"))]
-        crate::web::link(&route, self.theme_name());
+        crate::link::publish(&route, self.theme_name());
         self.route = route;
         cx.notify();
     }
 
-    #[cfg_attr(not(all(feature = "web", target_family = "wasm")), allow(dead_code))]
     fn theme_name(&self) -> Option<&str> {
         self.guide
             .themes
@@ -414,9 +426,8 @@ impl ComponentPage {
             .map(|index| {
                 let guide = guide.clone();
                 let gallery = gallery.clone();
-                cx.new(|cx| {
-                    ExampleBlock::new(guide, *index, Knobs::default(), false, gallery, window, cx)
-                })
+                let knobs = knob_store(cx).knobs(guide.examples[*index].id(), &BTreeMap::new());
+                cx.new(|cx| ExampleBlock::new(guide, *index, knobs, false, gallery, window, cx))
             })
             .collect();
         Self {
@@ -617,8 +628,8 @@ impl ExampleBlock {
     fn knobs_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.preview = build_preview(&self.guide, self.index, self.knobs.clone(), window, cx);
         self.copied = false;
-        // Keep an isolated example's URL in step, so it can be shared.
-        #[cfg(all(feature = "web", target_family = "wasm"))]
+        // Keep an isolated example's link in step, so it can be shared and a
+        // reload reopens the same knobs.
         if self.isolated
             && let Some(gallery) = self.gallery.upgrade()
         {
@@ -632,7 +643,10 @@ impl ExampleBlock {
                 id: self.example().id().clone(),
                 knobs,
             };
-            crate::web::link(&route, gallery.read(cx).theme_name());
+            gallery.update(cx, |gallery, _| {
+                crate::link::publish(&route, gallery.theme_name());
+                gallery.route = route;
+            });
         }
         cx.notify();
     }
@@ -1179,6 +1193,23 @@ fn highlight(source: &str) -> Vec<(Range<usize>, HighlightStyle)> {
     out
 }
 
+/// The gallery's knob memory, loaded on first use.
+fn knob_store(cx: &mut App) -> Rc<KnobStore> {
+    if !cx.has_global::<store::Shared>() {
+        let name = cx
+            .try_global::<GuideName>()
+            .map(|name| name.0.to_string())
+            .unwrap_or_default();
+        cx.set_global(store::Shared(KnobStore::load(&name)));
+    }
+    cx.global::<store::Shared>().0.clone()
+}
+
+/// The styleguide's name, which keys its saved knobs on the web.
+struct GuideName(SharedString);
+
+impl gpui::Global for GuideName {}
+
 /// Opens the styleguide in a new window through [`Styleguide::open_window`].
 pub fn open(
     guide: Rc<Styleguide>,
@@ -1211,23 +1242,36 @@ pub fn open(
 /// lifetime on the web, where the route comes from the URL. `example` opens
 /// that example's component (or that component, by name).
 pub fn run(guide: Styleguide, example: Option<String>) {
+    let route = example.map(|id| Route::Component(id.into()));
+    #[cfg(all(feature = "web", target_family = "wasm"))]
+    let (route, theme) = match route {
+        Some(route) => (Some(route), None),
+        None => crate::web::current_link(),
+    };
+    #[cfg(not(all(feature = "web", target_family = "wasm")))]
+    let theme = None;
+    launch(guide, route, theme);
+}
+
+/// Runs the styleguide app opened at `link`, a URL hash such as
+/// `#!/button/primary?theme=dark&disabled=true`. `cargo styleguide dev` uses
+/// it to reopen the same place after a rebuild.
+pub fn run_link(guide: Styleguide, link: &str) {
+    let (route, theme) = crate::link::parse(link);
+    launch(guide, route, theme);
+}
+
+fn launch(guide: Styleguide, route: Option<Route>, theme: Option<String>) {
     let guide = Rc::new(guide);
-    #[allow(unused_mut)]
-    let mut route = example.map(|id| Route::Component(id.into()));
-    #[allow(unused_mut)]
-    let mut theme = None;
     #[cfg(not(target_family = "wasm"))]
     let mut app = gpui_platform::application();
     #[cfg(all(feature = "web", target_family = "wasm"))]
     let mut app = crate::web::application();
-    #[cfg(all(feature = "web", target_family = "wasm"))]
-    if route.is_none() {
-        (route, theme) = crate::web::current_link();
-    }
     if let Some(assets) = guide.assets.clone() {
         app = app.with_assets(SharedAssets(assets));
     }
     app.run(move |cx| {
+        cx.set_global(GuideName(guide.name.clone()));
         guide.run_setup(cx);
         #[cfg(not(target_family = "wasm"))]
         cx.on_window_closed(|cx, _| cx.quit()).detach();

@@ -1,5 +1,8 @@
 //! `cargo styleguide`: builds a crate's styleguide example to WebAssembly and
-//! writes a static site that runs the gallery in the browser.
+//! writes a static site that runs the gallery in the browser, and reloads the
+//! styleguide on source changes during development.
+
+mod watch;
 
 use anyhow::{Context as _, Result, anyhow, bail};
 use serde_json::Value;
@@ -8,15 +11,21 @@ use std::{
     io::{BufRead as _, BufReader, Write as _},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Child, Command, Stdio},
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
+use watch::Watcher;
 
 const USAGE: &str = "\
 usage: cargo styleguide <command> [options]
 
 commands:
   build    compile the styleguide example to wasm and write a static site
-  serve    build, then serve the site on localhost
+  serve    build, then serve the site on localhost; with --watch, rebuild on
+           source changes and reload the page
+  dev      run the native styleguide, and rebuild and reopen it at the same
+           example, theme and knobs on source changes
 
 options:
   -p, --package NAME   the crate whose styleguide to build (default: the only
@@ -31,7 +40,8 @@ options:
   --toolchain NAME     rustup toolchain for the wasm build (default: nightly,
                        which GPUI's wasm scheduler requires; `none` uses the
                        current cargo)
-  --port PORT          serve: port (default: 8000)";
+  --port PORT          serve: port (default: 8000)
+  --watch              serve: rebuild on source changes and reload the page";
 
 /// Debug GPUI builds exceed wasm-ld's default 1 MiB stack on deep render
 /// trees; gpui-kit's web gallery links with the same size.
@@ -48,6 +58,7 @@ struct Options {
     toolchain: String,
     profile: String,
     port: u16,
+    watch: bool,
 }
 
 fn main() {
@@ -74,6 +85,7 @@ fn run(args: Vec<String>) -> Result<()> {
         toolchain: "nightly".into(),
         profile: "release".into(),
         port: 8000,
+        watch: false,
     };
     while let Some(arg) = args.next() {
         let mut value = || {
@@ -92,6 +104,7 @@ fn run(args: Vec<String>) -> Result<()> {
             "--title" => options.title = Some(value()?),
             "--toolchain" => options.toolchain = value()?,
             "--port" => options.port = value()?.parse()?,
+            "--watch" => options.watch = true,
             "-h" | "--help" => {
                 println!("{USAGE}");
                 return Ok(());
@@ -101,10 +114,12 @@ fn run(args: Vec<String>) -> Result<()> {
     }
     match command.as_str() {
         "build" => build(&options).map(|_| ()),
+        "serve" if options.watch => serve_watch(&options),
         "serve" => {
             let site = build(&options)?;
-            serve(&site, options.port)
+            serve(&site, options.port, None)
         }
+        "dev" => dev(&options),
         "" | "-h" | "--help" | "help" => {
             println!("{USAGE}");
             Ok(())
@@ -116,17 +131,18 @@ fn run(args: Vec<String>) -> Result<()> {
 fn build(options: &Options) -> Result<PathBuf> {
     let metadata = cargo_metadata()?;
     let package = select_package(&metadata, options)?;
-    let target_dir = PathBuf::from(
-        metadata["target_directory"]
-            .as_str()
-            .ok_or_else(|| anyhow!("cargo metadata has no target_directory"))?,
-    );
+    let target_dir = target_dir(&metadata)?;
 
     eprintln!(
         "building {package} --example {} for {TARGET}",
         options.example
     );
     let mut cargo = wasm_cargo(&options.toolchain);
+    if !options.release {
+        // Browsers don't use wasm debug info, and it makes a debug styleguide
+        // several times larger to bind and download.
+        cargo.env("CARGO_PROFILE_DEV_DEBUG", "0");
+    }
     cargo.args([
         "rustc",
         "-p",
@@ -171,7 +187,7 @@ fn build(options: &Options) -> Result<PathBuf> {
     fs::create_dir_all(&out)?;
     bindgen(&wasm, &out, &metadata)?;
     let title = options.title.clone().unwrap_or_else(|| package.clone());
-    fs::write(out.join("index.html"), index_html(&title))?;
+    fs::write(out.join("index.html"), index_html(&title, options.watch))?;
     eprintln!("wrote {}", out.display());
     Ok(out)
 }
@@ -288,28 +304,193 @@ fn bindgen(wasm: &Path, out: &Path, metadata: &Value) -> Result<()> {
     Ok(())
 }
 
-fn index_html(title: &str) -> String {
+fn index_html(title: &str, watch: bool) -> String {
     let title = title
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;");
-    include_str!("index.html").replace("{{title}}", &title)
+    let reload = if watch {
+        format!("<script>\n{}</script>\n", include_str!("reload.js"))
+    } else {
+        String::new()
+    };
+    include_str!("index.html")
+        .replace("{{title}}", &title)
+        .replace("{{reload}}", &reload)
 }
 
-/// A minimal static file server for previewing the site.
-fn serve(site: &Path, port: u16) -> Result<()> {
+/// The rebuild state `serve --watch` reports to the page at [`RELOAD_PATH`].
+#[derive(Default)]
+struct Rebuild {
+    /// Bumped after every successful rebuild; the page reloads when it changes.
+    version: u64,
+    building: bool,
+    failed: bool,
+}
+
+const RELOAD_PATH: &str = "/__styleguide/reload";
+
+/// Serves the site, rebuilding it on source changes. The page polls
+/// [`RELOAD_PATH`] and reloads after a successful rebuild; its URL keeps the
+/// route, theme and isolated knobs, so it reopens in the same place.
+fn serve_watch(options: &Options) -> Result<()> {
+    let site = build(options)?;
+    let metadata = cargo_metadata()?;
+    let watcher = Watcher::new(&metadata, vec![target_dir(&metadata)?, site.clone()])?;
+    let state = Arc::new(Mutex::new(Rebuild::default()));
+    let port = options.port;
+    let server = {
+        let (site, state) = (site.clone(), state.clone());
+        std::thread::spawn(move || serve(&site, port, Some(state)))
+    };
+    loop {
+        if server.is_finished() {
+            return server
+                .join()
+                .unwrap_or_else(|_| Err(anyhow!("the server stopped")));
+        }
+        if watcher.changed(Duration::from_millis(500)).is_empty() {
+            continue;
+        }
+        eprintln!("\nsources changed; rebuilding");
+        state.lock().unwrap().building = true;
+        let started = Instant::now();
+        let result = build(options);
+        let mut state = state.lock().unwrap();
+        state.building = false;
+        match result {
+            Ok(_) => {
+                state.version += 1;
+                state.failed = false;
+                eprintln!("rebuilt in {:.1?}; reloading the page", started.elapsed());
+            }
+            Err(error) => {
+                state.failed = true;
+                eprintln!("error: {error:#}\nthe page keeps the last good build");
+            }
+        }
+    }
+}
+
+/// Runs the native styleguide and, on every source change, rebuilds it and
+/// reopens it where it was: the gallery records its location in a link file,
+/// and the new process opens with `gallery --link`.
+fn dev(options: &Options) -> Result<()> {
+    let metadata = cargo_metadata()?;
+    let package = select_package(&metadata, options)?;
+    let target_dir = target_dir(&metadata)?;
+    let link_file = target_dir
+        .join("styleguide")
+        .join(format!("{package}.link"));
+    fs::create_dir_all(link_file.parent().unwrap())?;
+    fs::remove_file(&link_file).ok();
+    let watcher = Watcher::new(&metadata, vec![target_dir])?;
+
+    let mut child = Some(launch(&build_native(options, &package)?, &link_file)?);
+    loop {
+        if let Some(status) = child
+            .as_mut()
+            .and_then(|child| child.try_wait().ok().flatten())
+        {
+            if status.success() {
+                // The window was closed.
+                return Ok(());
+            }
+            eprintln!("the styleguide exited ({status}); waiting for changes");
+            child = None;
+        }
+        if watcher.changed(Duration::from_millis(250)).is_empty() {
+            continue;
+        }
+        eprintln!("\nsources changed; rebuilding");
+        let started = Instant::now();
+        match build_native(options, &package) {
+            Ok(executable) => {
+                if let Some(mut child) = child.take() {
+                    child.kill().ok();
+                    child.wait().ok();
+                }
+                child = Some(launch(&executable, &link_file)?);
+                eprintln!("reopened in {:.1?}", started.elapsed());
+            }
+            Err(error) => {
+                eprintln!("error: {error:#}\nthe running styleguide keeps the last good build")
+            }
+        }
+    }
+}
+
+/// Builds the styleguide example natively and returns its executable.
+fn build_native(options: &Options, package: &str) -> Result<PathBuf> {
+    let mut cargo = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
+    cargo.args([
+        "build",
+        "-p",
+        package,
+        "--example",
+        &options.example,
+        "--message-format=json-render-diagnostics",
+    ]);
+    if options.release {
+        cargo.args(["--profile", &options.profile]);
+    }
+    let output = cargo
+        .stderr(Stdio::inherit())
+        .output()
+        .context("running cargo")?;
+    if !output.status.success() {
+        bail!("the build failed");
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .filter(|message| {
+            message["reason"] == "compiler-artifact"
+                && message["target"]["name"] == options.example.as_str()
+        })
+        .find_map(|message| message["executable"].as_str().map(PathBuf::from))
+        .ok_or_else(|| anyhow!("cargo built no `{}` executable", options.example))
+}
+
+/// Starts the styleguide at the location in `link_file`, if any, and has it
+/// keep that file up to date.
+fn launch(executable: &Path, link_file: &Path) -> Result<Child> {
+    let mut command = Command::new(executable);
+    command
+        .arg("gallery")
+        .env("STYLEGUIDE_LINK_FILE", link_file);
+    if let Ok(link) = fs::read_to_string(link_file)
+        && !link.trim().is_empty()
+    {
+        command.args(["--link", link.trim()]);
+    }
+    command
+        .spawn()
+        .with_context(|| format!("starting {}", executable.display()))
+}
+
+fn target_dir(metadata: &Value) -> Result<PathBuf> {
+    metadata["target_directory"]
+        .as_str()
+        .map(PathBuf::from)
+        .ok_or_else(|| anyhow!("cargo metadata has no target_directory"))
+}
+
+/// A minimal static file server for previewing the site. With `rebuild`, it
+/// also answers the page's reload polls.
+fn serve(site: &Path, port: u16, rebuild: Option<Arc<Mutex<Rebuild>>>) -> Result<()> {
     let listener =
         TcpListener::bind(("127.0.0.1", port)).with_context(|| format!("binding port {port}"))?;
     eprintln!("serving {} at http://127.0.0.1:{port}/", site.display());
     for stream in listener.incoming() {
-        if let Err(error) = respond(stream?, site) {
+        if let Err(error) = respond(stream?, site, rebuild.as_deref()) {
             eprintln!("request failed: {error:#}");
         }
     }
     Ok(())
 }
 
-fn respond(mut stream: TcpStream, site: &Path) -> Result<()> {
+fn respond(mut stream: TcpStream, site: &Path, rebuild: Option<&Mutex<Rebuild>>) -> Result<()> {
     let mut request = String::new();
     BufReader::new(&stream).read_line(&mut request)?;
     let path = request.split_whitespace().nth(1).unwrap_or("/");
@@ -320,9 +501,20 @@ fn respond(mut stream: TcpStream, site: &Path) -> Result<()> {
     } else {
         site.join(relative)
     };
-    let (status, body, content_type) = match fs::read(&file) {
-        Ok(body) => ("200 OK", body, content_type(&file)),
-        Err(_) => ("404 Not Found", b"not found".to_vec(), "text/plain"),
+    let (status, body, content_type) = match (rebuild, path) {
+        (Some(rebuild), RELOAD_PATH) => {
+            let rebuild = rebuild.lock().unwrap();
+            let body = serde_json::json!({
+                "version": rebuild.version,
+                "building": rebuild.building,
+                "failed": rebuild.failed,
+            });
+            ("200 OK", body.to_string().into_bytes(), "application/json")
+        }
+        _ => match fs::read(&file) {
+            Ok(body) => ("200 OK", body, content_type(&file)),
+            Err(_) => ("404 Not Found", b"not found".to_vec(), "text/plain"),
+        },
     };
     write!(
         stream,

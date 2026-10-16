@@ -18,17 +18,20 @@ pub struct Knobs(Rc<RefCell<State>>);
 struct State {
     specs: Vec<KnobEntry>,
     values: BTreeMap<String, KnobValue>,
-    /// Values from a URL, typed once the example declares the knob.
+    /// Values from a URL or an earlier run, typed once the example declares
+    /// the knob.
     raw: BTreeMap<String, String>,
+    /// Where the gallery remembers changes, and the example they belong to.
+    #[cfg(feature = "gallery")]
+    store: Option<(Rc<crate::store::KnobStore>, String)>,
 }
 
 impl Knobs {
     #[cfg_attr(not(feature = "render"), allow(dead_code))]
     pub(crate) fn with_values(values: BTreeMap<String, KnobValue>) -> Self {
         Self(Rc::new(RefCell::new(State {
-            specs: Vec::new(),
             values,
-            raw: BTreeMap::new(),
+            ..State::default()
         })))
     }
 
@@ -39,6 +42,13 @@ impl Knobs {
         let knobs = Self::default();
         knobs.0.borrow_mut().raw = raw;
         knobs
+    }
+
+    /// Knobs whose changes `store` remembers for example `id`.
+    #[cfg(feature = "gallery")]
+    pub(crate) fn persisting(self, store: Rc<crate::store::KnobStore>, id: String) -> Self {
+        self.0.borrow_mut().store = Some((store, id));
+        self
     }
 
     /// A switch.
@@ -156,12 +166,23 @@ impl Knobs {
 
     /// Overrides `name`; the next render reads `value`.
     pub fn set(&self, name: &str, value: KnobValue) {
-        self.0.borrow_mut().values.insert(name.into(), value);
+        let mut state = self.0.borrow_mut();
+        #[cfg(feature = "gallery")]
+        if let Some((store, id)) = &state.store {
+            store.set(id, name, value.key());
+        }
+        state.values.insert(name.into(), value);
     }
 
     /// Resets every knob to its default.
     pub fn reset(&self) {
-        self.0.borrow_mut().values.clear();
+        let mut state = self.0.borrow_mut();
+        #[cfg(feature = "gallery")]
+        if let Some((store, id)) = &state.store {
+            store.clear(id);
+        }
+        state.values.clear();
+        state.raw.clear();
     }
 }
 

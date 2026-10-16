@@ -5,7 +5,10 @@ const USAGE: &str = "\
 usage: styleguide [command] [options]
 
 commands:
-  gallery [--example ID]    open the interactive gallery (default)
+  gallery [--example ID] [--link HASH]
+                            open the interactive gallery (default), at a
+                            component, or at a link such as
+                            '#!/button/primary?theme=dark'
   render [--filter PREFIX]  render snapshots, manifest and docs header to styleguide/
   check [--filter PREFIX] [--tolerance FRACTION]
                             re-render and compare with the committed snapshots
@@ -28,7 +31,7 @@ commands:
 pub fn main(guide: Styleguide) {
     #[cfg(target_family = "wasm")]
     {
-        if let Err(error) = gallery(guide, None) {
+        if let Err(error) = gallery(guide, None, None) {
             crate::guide::log_error(&format!("{error:#}"));
         }
     }
@@ -45,6 +48,7 @@ fn run(guide: Styleguide, args: Vec<String>) -> anyhow::Result<()> {
     let command = args.next().unwrap_or_else(|| "gallery".into());
     let mut filter = None;
     let mut example = None;
+    let mut link = None;
     let mut tolerance = 0.002;
     while let Some(arg) = args.next() {
         let mut value = || {
@@ -54,6 +58,7 @@ fn run(guide: Styleguide, args: Vec<String>) -> anyhow::Result<()> {
         match arg.as_str() {
             "--filter" => filter = Some(value()?),
             "--example" => example = Some(value()?),
+            "--link" => link = Some(value()?),
             "--tolerance" => tolerance = value()?.parse()?,
             "-h" | "--help" => {
                 println!("{USAGE}");
@@ -72,7 +77,7 @@ fn run(guide: Styleguide, args: Vec<String>) -> anyhow::Result<()> {
         }
         "render" => render(&guide, filter.as_deref()),
         "check" => check(&guide, filter.as_deref(), tolerance),
-        "gallery" => gallery(guide, example),
+        "gallery" => gallery(guide, example, link),
         "-h" | "--help" | "help" => {
             println!("{USAGE}");
             Ok(())
@@ -105,8 +110,11 @@ fn check(_: &Styleguide, _: Option<&str>, _: f64) -> anyhow::Result<()> {
     all(feature = "gallery", not(target_family = "wasm")),
     all(feature = "web", target_family = "wasm")
 ))]
-fn gallery(guide: Styleguide, example: Option<String>) -> anyhow::Result<()> {
-    crate::gallery::run(guide, example);
+fn gallery(guide: Styleguide, example: Option<String>, link: Option<String>) -> anyhow::Result<()> {
+    match link {
+        Some(link) if example.is_none() => crate::gallery::run_link(guide, &link),
+        _ => crate::gallery::run(guide, example),
+    }
     Ok(())
 }
 
@@ -114,7 +122,7 @@ fn gallery(guide: Styleguide, example: Option<String>) -> anyhow::Result<()> {
     all(feature = "gallery", not(target_family = "wasm")),
     all(feature = "web", target_family = "wasm")
 )))]
-fn gallery(_: Styleguide, _: Option<String>) -> anyhow::Result<()> {
+fn gallery(_: Styleguide, _: Option<String>, _: Option<String>) -> anyhow::Result<()> {
     anyhow::bail!(if cfg!(target_family = "wasm") {
         "the web gallery needs gpui-styleguidist's `web` feature"
     } else {
