@@ -147,8 +147,10 @@ Both watch the package and every local crate it builds from.
   prefer `dev` for quick iteration.
 - **A failed build keeps the last good one running.** The errors print in the
   terminal.
-- **Knobs survive a reload only in isolation.** On a component page they
-  reset, so use "Open isolated" for the example you're working on.
+- **Knobs never reset on their own.** Every value you set is remembered per
+  example, across reloads, rebuilds, theme switches and navigation, until you
+  press "Reset knobs". The web keeps them in `localStorage`; natively they
+  sit next to the styleguide executable in `<executable>.knobs.json`.
 
 This rebuilds and restarts; it does not patch the running code.
 [subsecond](https://crates.io/crates/subsecond) hot-patching only patches the

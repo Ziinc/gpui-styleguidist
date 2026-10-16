@@ -40,4 +40,4 @@ gpui_platform = { workspace = true, optional = true }
 [target.'cfg(target_family = "wasm")'.dependencies]
 gpui_web = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
-web-sys = { version = "0.3", optional = true, features = ["Window", "Location", "History", "console"] }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Location", "History", "Storage", "console"] }

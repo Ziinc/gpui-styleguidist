@@ -28,6 +28,8 @@ mod link;
 mod preview;
 #[cfg(all(feature = "render", not(target_family = "wasm")))]
 mod render;
+#[cfg(feature = "gallery")]
+mod store;
 #[cfg(all(feature = "web", target_family = "wasm"))]
 mod web;
 

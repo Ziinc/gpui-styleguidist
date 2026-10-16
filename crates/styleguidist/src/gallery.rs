@@ -7,7 +7,11 @@
 //! `#/Component` opens a component and `#!/example-id?knob=value` opens one
 //! example in isolation (what rustdoc previews embed as their playground).
 
-use crate::{Example, Frame, Knobs, Styleguide, preview::Canvas};
+use crate::{
+    Example, Frame, Knobs, Styleguide,
+    preview::Canvas,
+    store::{self, KnobStore},
+};
 use gpui::{
     AnyView, App, AppContext as _, Bounds, ClipboardItem, Context, Entity, FocusHandle, Focusable,
     FontWeight, HighlightStyle, Hsla, InteractiveElement as _, IntoElement, KeyDownEvent,
@@ -139,6 +143,16 @@ impl Gallery {
 
     fn navigate(&mut self, route: Route, window: &mut Window, cx: &mut Context<Self>) {
         let gallery = cx.weak_entity();
+        // An isolated example's link carries its saved knobs, with the link's
+        // own values on top, so it can be shared as it looks.
+        let route = match route {
+            Route::Isolated { id, knobs } => {
+                let mut saved = knob_store(cx).saved(&id);
+                saved.extend(knobs);
+                Route::Isolated { id, knobs: saved }
+            }
+            route => route,
+        };
         self.content = match &route {
             Route::Component(name) => self
                 .groups
@@ -158,7 +172,7 @@ impl Gallery {
                     .position(|example| example.id() == id);
                 index.map(|index| {
                     let guide = self.guide.clone();
-                    let knobs = Knobs::with_raw(knobs.clone());
+                    let knobs = knob_store(cx).knobs(id, knobs);
                     cx.new(|cx| ExampleBlock::new(guide, index, knobs, true, gallery, window, cx))
                         .into()
                 })
@@ -412,9 +426,8 @@ impl ComponentPage {
             .map(|index| {
                 let guide = guide.clone();
                 let gallery = gallery.clone();
-                cx.new(|cx| {
-                    ExampleBlock::new(guide, *index, Knobs::default(), false, gallery, window, cx)
-                })
+                let knobs = knob_store(cx).knobs(guide.examples[*index].id(), &BTreeMap::new());
+                cx.new(|cx| ExampleBlock::new(guide, *index, knobs, false, gallery, window, cx))
             })
             .collect();
         Self {
@@ -1180,6 +1193,23 @@ fn highlight(source: &str) -> Vec<(Range<usize>, HighlightStyle)> {
     out
 }
 
+/// The gallery's knob memory, loaded on first use.
+fn knob_store(cx: &mut App) -> Rc<KnobStore> {
+    if !cx.has_global::<store::Shared>() {
+        let name = cx
+            .try_global::<GuideName>()
+            .map(|name| name.0.to_string())
+            .unwrap_or_default();
+        cx.set_global(store::Shared(KnobStore::load(&name)));
+    }
+    cx.global::<store::Shared>().0.clone()
+}
+
+/// The styleguide's name, which keys its saved knobs on the web.
+struct GuideName(SharedString);
+
+impl gpui::Global for GuideName {}
+
 /// Opens the styleguide in a new window through [`Styleguide::open_window`].
 pub fn open(
     guide: Rc<Styleguide>,
@@ -1241,6 +1271,7 @@ fn launch(guide: Styleguide, route: Option<Route>, theme: Option<String>) {
         app = app.with_assets(SharedAssets(assets));
     }
     app.run(move |cx| {
+        cx.set_global(GuideName(guide.name.clone()));
         guide.run_setup(cx);
         #[cfg(not(target_family = "wasm"))]
         cx.on_window_closed(|cx, _| cx.quit()).detach();
