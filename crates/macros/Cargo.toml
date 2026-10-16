@@ -1,0 +1,18 @@
+[package]
+name = "gpui-styleguidist-macros"
+description = "Macros for gpui-styleguidist: rustdoc previews and example source capture."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+gpui-styleguidist-manifest.workspace = true
+serde_json.workspace = true
+base64 = "0.22"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
