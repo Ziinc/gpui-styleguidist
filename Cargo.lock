@@ -796,6 +796,7 @@ name = "cargo-styleguide"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "gpui-styleguidist-manifest",
  "notify",
  "serde_json",
 ]

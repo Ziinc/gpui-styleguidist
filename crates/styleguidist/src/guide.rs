@@ -21,6 +21,7 @@ pub struct Example {
     component: Option<SharedString>,
     description: SharedString,
     code: Vec<CodePart>,
+    states: Vec<(SharedString, Vec<(String, String)>)>,
     size: Option<Size<Pixels>>,
     build: BuildFn,
 }
@@ -70,6 +71,7 @@ impl Example {
             component: None,
             description: SharedString::default(),
             code: Vec::new(),
+            states: Vec::new(),
             size: None,
             build,
         }
@@ -106,6 +108,30 @@ impl Example {
     /// example's source.
     pub fn code(mut self, code: Vec<CodePart>) -> Self {
         self.code = code;
+        self
+    }
+
+    /// A named state of the component, such as "Disabled": the knob values
+    /// that produce it, written as a link would carry them. Knobs it leaves
+    /// out keep their defaults. The component page and rustdoc show every
+    /// state side by side, each with the code that produces it.
+    ///
+    /// ```ignore
+    /// example!("button/playground", |knobs, _, _| { … })
+    ///     .state("Default", [])
+    ///     .state("Disabled", [("disabled", "true")])
+    ///     .state("Destructive", [("tone", "danger"), ("label", "Delete")])
+    /// ```
+    pub fn state<'a>(
+        mut self,
+        name: impl Into<SharedString>,
+        values: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Self {
+        let values = values
+            .into_iter()
+            .map(|(knob, value)| (knob.to_string(), value.to_string()))
+            .collect();
+        self.states.push((name.into(), values));
         self
     }
 
@@ -150,6 +176,11 @@ impl Example {
 
     pub fn description_text(&self) -> &SharedString {
         &self.description
+    }
+
+    /// The named states, in the order given.
+    pub fn states(&self) -> &[(SharedString, Vec<(String, String)>)] {
+        &self.states
     }
 
     /// The code template, knob slots included.

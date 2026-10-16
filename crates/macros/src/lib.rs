@@ -264,12 +264,43 @@ fn html(dir: &Path, args: &PreviewArgs) -> Result<String, String> {
         out.push_str("</div></details>\n");
     }
     if !example.code.is_empty() {
-        let code = manifest::render_code(&example.code, &example.knobs, |_| None);
-        // Newlines inside an HTML block are fine; blank lines would end it.
-        let code = escape(&code).replace("\n\n", "\n&#32;\n");
+        let code = code_html(&manifest::render_code(
+            &example.code,
+            &example.knobs,
+            |_| None,
+        ));
         out.push_str(&format!(
             "<details class=\"gsg-code\"><summary>View code</summary><pre><code>{code}</code></pre></details>\n"
         ));
+    }
+    if !example.states.is_empty() {
+        out.push_str("<div class=\"gsg-states\"><div class=\"gsg-states-title\">States</div><div class=\"gsg-state-grid\">");
+        for state in &example.states {
+            out.push_str(&format!(
+                "<figure class=\"gsg-state\"><figcaption>{}</figcaption><div class=\"gsg-preview\">",
+                escape(&state.name)
+            ));
+            // One snapshot per theme; the page shows the selected theme's.
+            for variant_theme in &example.themes {
+                if let Some(variant) = example.state_variant(state, variant_theme) {
+                    let img = image(dir, example, variant, Some(&state.name))?;
+                    out.push_str(&if *variant_theme == theme {
+                        img
+                    } else {
+                        img.replacen("<img ", "<img hidden ", 1)
+                    });
+                }
+            }
+            out.push_str("</div>");
+            if !example.code.is_empty() {
+                out.push_str(&format!(
+                    "<pre><code>{}</code></pre>",
+                    code_html(&example.code_for(&state.values))
+                ));
+            }
+            out.push_str("</figure>");
+        }
+        out.push_str("</div></div>\n");
     }
     let data = serde_json::json!({
         "id": example.id,
@@ -342,6 +373,12 @@ fn display(path: &Path) -> String {
         .unwrap_or(path)
         .display()
         .to_string()
+}
+
+/// Code escaped for an HTML block in Markdown, where newlines are fine but a
+/// blank line would end the block.
+fn code_html(code: &str) -> String {
+    escape(code).replace("\n\n", "\n&#32;\n")
 }
 
 fn escape(text: &str) -> String {

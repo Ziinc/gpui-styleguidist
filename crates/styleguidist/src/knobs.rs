@@ -186,7 +186,7 @@ impl Knobs {
     }
 }
 
-fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
+pub(crate) fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
     match control {
         KnobControl::Bool => raw.parse().ok().map(KnobValue::Bool),
         KnobControl::Select { options } => options

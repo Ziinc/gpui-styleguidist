@@ -90,6 +90,8 @@ fn groups(guide: &Styleguide) -> Vec<Group> {
             }),
         }
     }
+    // One page per documented component; a description alone is no page.
+    groups.retain(|group| !group.examples.is_empty());
     groups
 }
 
@@ -586,7 +588,17 @@ struct ExampleBlock {
     show_code: bool,
     show_knobs: bool,
     copied: bool,
+    states: Vec<StateView>,
     gallery: WeakEntity<Gallery>,
+}
+
+/// A named state of an example: a fixed preview and the code that produces
+/// it.
+struct StateView {
+    name: SharedString,
+    knobs: Knobs,
+    preview: AnyView,
+    copied: bool,
 }
 
 impl ExampleBlock {
@@ -607,6 +619,25 @@ impl ExampleBlock {
             focus: cx.focus_handle(),
         });
         let preview = build_preview(&guide, index, knobs.clone(), window, cx);
+        // States show on the component page; an isolated example is one
+        // live preview.
+        let states = if isolated {
+            Vec::new()
+        } else {
+            guide.examples[index]
+                .states()
+                .iter()
+                .map(|(name, values)| {
+                    let knobs = Knobs::with_raw(values.iter().cloned().collect());
+                    StateView {
+                        name: name.clone(),
+                        preview: build_preview(&guide, index, knobs.clone(), window, cx),
+                        knobs,
+                        copied: false,
+                    }
+                })
+                .collect()
+        };
         Self {
             guide,
             index,
@@ -617,6 +648,7 @@ impl ExampleBlock {
             show_code: false,
             show_knobs: true,
             copied: false,
+            states,
             gallery,
         }
     }
@@ -793,6 +825,125 @@ impl Render for ExampleBlock {
                             ),
                         )
                     }),
+            )
+            .when(!self.states.is_empty(), |this| {
+                this.child(self.states_grid(cx))
+            })
+    }
+}
+
+impl ExampleBlock {
+    /// Every named state side by side, each with its code.
+    fn states_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = palette();
+        let id = self.example().id().clone();
+        div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .pt_2()
+            .child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(palette.light)
+                    .child("States"),
+            )
+            .child(
+                div()
+                    .grid()
+                    .grid_cols(2)
+                    .gap_4()
+                    .children(self.states.iter().enumerate().map(|(index, state)| {
+                        let code: SharedString = self.example().code_for(&state.knobs).into();
+                        // Every knob, so saved values don't leak into the state.
+                        let route = Route::Isolated {
+                            id: id.clone(),
+                            knobs: state
+                                .knobs
+                                .specs()
+                                .iter()
+                                .filter_map(|spec| {
+                                    Some((spec.name.clone(), state.knobs.value(&spec.name)?.key()))
+                                })
+                                .collect(),
+                        };
+                        div()
+                            .id(("styleguide-state", index))
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .border_1()
+                            .border_color(palette.border)
+                            .rounded(px(3.))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .px_4()
+                                    .py_2()
+                                    .border_b_1()
+                                    .border_color(palette.border)
+                                    .child(
+                                        div()
+                                            .text_size(px(15.))
+                                            .text_color(palette.base)
+                                            .child(state.name.clone()),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .gap_3()
+                                            .child(
+                                                link(
+                                                    "styleguide-copy",
+                                                    if state.copied { "Copied" } else { "Copy" },
+                                                    palette.light,
+                                                )
+                                                .on_click(cx.listener({
+                                                    let code = code.clone();
+                                                    move |this, _, _, cx| {
+                                                        cx.write_to_clipboard(
+                                                            ClipboardItem::new_string(
+                                                                code.to_string(),
+                                                            ),
+                                                        );
+                                                        for (other, state) in
+                                                            this.states.iter_mut().enumerate()
+                                                        {
+                                                            state.copied = other == index;
+                                                        }
+                                                        cx.notify();
+                                                    }
+                                                })),
+                                            )
+                                            .child(
+                                                link(
+                                                    "styleguide-isolate",
+                                                    "Open isolated",
+                                                    palette.light,
+                                                )
+                                                .on_click(cx.listener(
+                                                    move |this, _, window, cx| {
+                                                        let route = route.clone();
+                                                        this.gallery
+                                                            .update(cx, |gallery, cx| {
+                                                                gallery.navigate(route, window, cx)
+                                                            })
+                                                            .ok();
+                                                    },
+                                                )),
+                                            ),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .id("styleguide-preview")
+                                    .overflow_x_scroll()
+                                    .child(state.preview.clone()),
+                            )
+                            .child(code_block(&code))
+                    })),
             )
     }
 }

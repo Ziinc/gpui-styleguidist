@@ -5,6 +5,7 @@
 mod watch;
 
 use anyhow::{Context as _, Result, anyhow, bail};
+use gpui_styleguidist_manifest::{self as manifest, Manifest, llms};
 use serde_json::Value;
 use std::{
     fs,
@@ -26,6 +27,9 @@ commands:
            source changes and reload the page
   dev      run the native styleguide, and rebuild and reopen it at the same
            example, theme and knobs on source changes
+  llms     write Markdown docs for language models from the rendered manifest
+           (styleguide/manifest.json): llms.txt, llms-full.txt and one page
+           per component under llms/
 
 options:
   -p, --package NAME   the crate whose styleguide to build (default: the only
@@ -35,7 +39,10 @@ options:
   --release            optimized build with the `release` profile
   --profile NAME       optimized build with this cargo profile, e.g. one with
                        opt-level = 'z' and lto for a smaller download
-  --out DIR            site directory (default: target/styleguide/<package>)
+  --out-dir DIR        site directory, or for llms the directory of its files
+                       (default: target/styleguide/<package>); --out also works
+  --out-file FILE      llms: write every component page into this one file
+                       instead, or to stdout for `-`
   --title TEXT         page title (default: the package name)
   --toolchain NAME     rustup toolchain for the wasm build (default: nightly,
                        which GPUI's wasm scheduler requires; `none` uses the
@@ -54,6 +61,7 @@ struct Options {
     example: String,
     release: bool,
     out: Option<PathBuf>,
+    out_file: Option<PathBuf>,
     title: Option<String>,
     toolchain: String,
     profile: String,
@@ -81,6 +89,7 @@ fn run(args: Vec<String>) -> Result<()> {
         example: "styleguide".into(),
         release: false,
         out: None,
+        out_file: None,
         title: None,
         toolchain: "nightly".into(),
         profile: "release".into(),
@@ -100,7 +109,8 @@ fn run(args: Vec<String>) -> Result<()> {
                 options.release = true;
                 options.profile = value()?;
             }
-            "--out" => options.out = Some(value()?.into()),
+            "--out" | "--out-dir" => options.out = Some(value()?.into()),
+            "--out-file" => options.out_file = Some(value()?.into()),
             "--title" => options.title = Some(value()?),
             "--toolchain" => options.toolchain = value()?,
             "--port" => options.port = value()?.parse()?,
@@ -120,6 +130,7 @@ fn run(args: Vec<String>) -> Result<()> {
             serve(&site, options.port, None)
         }
         "dev" => dev(&options),
+        "llms" => llms(&options),
         "" | "-h" | "--help" | "help" => {
             println!("{USAGE}");
             Ok(())
@@ -188,8 +199,87 @@ fn build(options: &Options) -> Result<PathBuf> {
     bindgen(&wasm, &out, &metadata)?;
     let title = options.title.clone().unwrap_or_else(|| package.clone());
     fs::write(out.join("index.html"), index_html(&title, options.watch))?;
+    // The site serves its LLM docs too, once snapshots have been rendered.
+    if let Some(manifest) = read_manifest(&metadata, &package)? {
+        write_llms(&manifest, &out)?;
+    }
     eprintln!("wrote {}", out.display());
     Ok(out)
+}
+
+/// Writes the LLM docs for the package's rendered manifest.
+fn llms(options: &Options) -> Result<()> {
+    let metadata = cargo_metadata()?;
+    let package = select_package(&metadata, options)?;
+    let manifest = read_manifest(&metadata, &package)?.with_context(|| {
+        format!(
+            "{package} has no {}/{}; render it first with `cargo run -p {package} --example {} -- render`",
+            manifest::DIR,
+            manifest::FILE,
+            options.example
+        )
+    })?;
+    match &options.out_file {
+        Some(file) if file.as_os_str() == "-" => {
+            print!("{}", llms::full(&manifest));
+        }
+        Some(file) => {
+            if let Some(parent) = file
+                .parent()
+                .filter(|parent| !parent.as_os_str().is_empty())
+            {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(file, llms::full(&manifest))?;
+            eprintln!("wrote {}", file.display());
+        }
+        None => {
+            let out = match &options.out {
+                Some(out) => out.clone(),
+                None => target_dir(&metadata)?.join("styleguide").join(&package),
+            };
+            write_llms(&manifest, &out)?;
+            eprintln!("wrote {}", out.join(llms::INDEX).display());
+        }
+    }
+    Ok(())
+}
+
+/// `llms.txt`, `llms-full.txt` and `llms/<Component>.md` in `out`.
+fn write_llms(manifest: &Manifest, out: &Path) -> Result<()> {
+    let pages = out.join(llms::PAGES);
+    if pages.exists() {
+        fs::remove_dir_all(&pages)?;
+    }
+    fs::create_dir_all(&pages)?;
+    fs::write(out.join(llms::INDEX), llms::index(manifest))?;
+    fs::write(out.join(llms::FULL), llms::full(manifest))?;
+    for component in llms::components(manifest) {
+        fs::write(out.join(component.path()), llms::page(&component))?;
+    }
+    Ok(())
+}
+
+/// The package's rendered manifest, if it has one.
+fn read_manifest(metadata: &Value, package: &str) -> Result<Option<Manifest>> {
+    let manifest_path = metadata["packages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|entry| entry["name"] == package)
+        .and_then(|entry| entry["manifest_path"].as_str())
+        .with_context(|| format!("no package named {package}"))?;
+    let path = Path::new(manifest_path)
+        .parent()
+        .unwrap_or(Path::new("."))
+        .join(manifest::DIR)
+        .join(manifest::FILE);
+    let Ok(text) = fs::read_to_string(&path) else {
+        return Ok(None);
+    };
+    let manifest =
+        serde_json::from_str(&text).with_context(|| format!("reading {}", path.display()))?;
+    Ok(Some(manifest))
 }
 
 /// GPUI's wasm scheduler uses unstable `std::arch` APIs, so the wasm build

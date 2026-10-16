@@ -3,6 +3,8 @@
 //! `styleguide/manifest.json` next to the PNG snapshots, and is plain data so
 //! the doc macros can read it without compiling GPUI.
 
+pub mod llms;
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -26,6 +28,12 @@ pub const HEADER: &str = "header.html";
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
     pub version: u32,
+    /// The styleguide's name.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+    /// Each documented component and its description, in the order given.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub components: Vec<ComponentEntry>,
     /// The hosted wasm styleguide; docs open `<url>#!/<example id>` in an
     /// iframe as the live playground.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -53,6 +61,9 @@ pub struct ExampleEntry {
     pub code: Vec<CodePart>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub knobs: Vec<KnobEntry>,
+    /// Named states of the component, each a set of knob values.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub states: Vec<StateEntry>,
     pub themes: Vec<String>,
     pub variants: Vec<VariantEntry>,
 }
@@ -64,6 +75,36 @@ impl ExampleEntry {
             .iter()
             .find(|variant| variant.theme == theme && variant.is_default)
     }
+
+    /// The snapshot of `state` in `theme`.
+    pub fn state_variant(&self, state: &StateEntry, theme: &str) -> Option<&VariantEntry> {
+        self.variants
+            .iter()
+            .find(|variant| variant.theme == theme && variant.key == state.key)
+    }
+
+    /// The example's code with `values` filled in, defaults elsewhere.
+    pub fn code_for(&self, values: &BTreeMap<String, KnobValue>) -> String {
+        render_code(&self.code, &self.knobs, |name| values.get(name).cloned())
+    }
+}
+
+/// A documented component.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ComponentEntry {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+}
+
+/// A named state of an example, such as Disabled or Loading.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StateEntry {
+    pub name: String,
+    /// The variant key of its snapshots.
+    pub key: String,
+    /// Every knob's value in this state.
+    pub values: BTreeMap<String, KnobValue>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

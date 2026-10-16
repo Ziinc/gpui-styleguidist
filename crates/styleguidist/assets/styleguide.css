@@ -17,3 +17,11 @@
 .gpui-styleguide .gsg-missing{padding:.6em .8em;font-size:.9em}
 .gpui-styleguide iframe{display:block;width:100%;height:520px;border:0;border-top:1px solid var(--border-color,#ddd)}
 .gpui-styleguide.gsg-enhanced .gsg-variants{display:none}
+.gpui-styleguide .gsg-states{border-top:1px solid var(--border-color,#ddd);padding:.4em .8em .8em}
+.gpui-styleguide .gsg-states-title{font-size:.85em;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
+.gpui-styleguide .gsg-state-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(18em,1fr));gap:.8em;margin-top:.6em}
+.gpui-styleguide .gsg-state{margin:0;min-width:0;border:1px solid var(--border-color,#ddd);border-radius:4px;overflow:hidden}
+.gpui-styleguide .gsg-state figcaption{display:flex;justify-content:space-between;align-items:center;padding:.3em .6em;font-size:.9em;border-bottom:1px solid var(--border-color,#ddd)}
+.gpui-styleguide .gsg-state .gsg-copy{position:static;font-size:.8em}
+.gpui-styleguide .gsg-state pre{margin:0;padding:.6em;background:var(--code-block-background-color,#f5f5f5);overflow-x:auto;font-size:.85em}
+.gpui-styleguide img[hidden]{display:none}
