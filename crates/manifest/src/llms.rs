@@ -20,12 +20,14 @@ pub struct Component<'a> {
     pub name: String,
     pub description: String,
     pub examples: Vec<&'a ExampleEntry>,
+    /// The page's file name without `.md`, unique among the components.
+    file: String,
 }
 
 impl Component<'_> {
     /// The page's path relative to [`INDEX`]: `llms/ActionButton.md`.
     pub fn path(&self) -> String {
-        format!("{PAGES}/{}.md", slug(&self.name))
+        format!("{PAGES}/{}.md", self.file)
     }
 }
 
@@ -39,6 +41,7 @@ pub fn components(manifest: &Manifest) -> Vec<Component<'_>> {
             name: component.name.clone(),
             description: component.description.clone(),
             examples: Vec::new(),
+            file: String::new(),
         })
         .collect();
     for example in &manifest.examples {
@@ -55,10 +58,24 @@ pub fn components(manifest: &Manifest) -> Vec<Component<'_>> {
                 name,
                 description: String::new(),
                 examples: vec![example],
+                file: String::new(),
             }),
         }
     }
     components.retain(|component| !component.examples.is_empty());
+    // Names that slug alike, such as `A B` and `A-B`, get numbered files.
+    let mut files: Vec<String> = Vec::new();
+    for component in &mut components {
+        let base = slug(&component.name);
+        let mut file = base.clone();
+        let mut number = 2;
+        while files.iter().any(|taken| taken.eq_ignore_ascii_case(&file)) {
+            file = format!("{base}-{number}");
+            number += 1;
+        }
+        files.push(file.clone());
+        component.file = file;
+    }
     components
 }
 
@@ -285,6 +302,9 @@ fn title(manifest: &Manifest) -> &str {
 
 /// A file name for a component: `Action Button` becomes `Action-Button`.
 fn slug(name: &str) -> String {
+    if name.trim().is_empty() {
+        return "component".into();
+    }
     name.chars()
         .map(|c| {
             if c.is_alphanumeric() || c == '_' || c == '-' {
@@ -311,5 +331,26 @@ mod tests {
         ];
         assert_eq!(method_before(&parts, "label"), None);
         assert_eq!(method_before(&parts, "tone").as_deref(), Some("tone"));
+    }
+
+    #[test]
+    fn page_files_are_unique() {
+        let example = |id: &str, component: &str| ExampleEntry {
+            id: id.into(),
+            title: id.into(),
+            component: Some(component.into()),
+            description: String::new(),
+            code: Vec::new(),
+            knobs: Vec::new(),
+            states: Vec::new(),
+            themes: Vec::new(),
+            variants: Vec::new(),
+        };
+        let manifest = Manifest {
+            examples: vec![example("a", "A B"), example("b", "A-B"), example("c", "")],
+            ..Manifest::default()
+        };
+        let paths: Vec<String> = components(&manifest).iter().map(Component::path).collect();
+        assert_eq!(paths, ["llms/A-B.md", "llms/A-B-2.md", "llms/component.md"]);
     }
 }

@@ -511,7 +511,7 @@ impl Render for ComponentPage {
 
 fn props_table(props: &[KnobEntry]) -> impl IntoElement {
     let palette = palette();
-    let cell = || div().py_2().pr_4().flex_1();
+    let cell = || div().py_2().pr_4().flex_1().min_w_0();
     div()
         .flex()
         .flex_col()

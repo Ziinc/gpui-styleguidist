@@ -77,6 +77,9 @@ pub fn styleguide() -> Styleguide {
   `pick`, `text`, `text_samples` and `number`. The gallery shows a control for each
   one, and `render` snapshots every finite combination (bools, selects, text
   samples) up to `variant_limit`.
+- **Example ids are paths.** An id names the example's snapshot directory,
+  so it is `/`-separated names, with no empty, `.` or `..` segment, and is
+  unique. Every command refuses to run otherwise.
 - **`example!(…)` is for stateless elements.** `example!(view …)` is for
   components that need an entity, such as an input's `InputState`. It is
   rebuilt on every knob change.
@@ -182,7 +185,8 @@ Both watch the package and every local crate it builds from.
 - **Knobs never reset on their own.** Every value you set is remembered per
   example, across reloads, rebuilds, theme switches and navigation, until you
   press "Reset knobs". The web keeps them in `localStorage`; natively they
-  sit next to the styleguide executable in `<executable>.knobs.json`.
+  sit next to the styleguide executable in
+  `<executable>.<styleguide name>.knobs.json`.
 
 This rebuilds and restarts; it does not patch the running code.
 [subsecond](https://crates.io/crates/subsecond) hot-patching only patches the
