@@ -242,6 +242,16 @@ uses (`=0.3.9`). Your crate must resolve the same GPUI.
 | `crates/cli` | `cargo-styleguide`: the wasm static-site builder and preview server |
 | `examples/kit-demo` | gpui-kit components documented end to end, with committed snapshots |
 
+## Releasing
+
+Bump `version` in the workspace `Cargo.toml` (and the matching
+`workspace.dependencies` versions), merge, then publish a GitHub release tagged
+`v<version>`. The Publish workflow checks the tag against the version and
+publishes `gpui-styleguidist-manifest`, `gpui-styleguidist-macros`,
+`gpui-styleguidist` and `cargo-styleguide` in that order, using the
+`CARGO_REGISTRY_TOKEN` repository secret. Versions already on crates.io are
+skipped, so a failed run can be re-run.
+
 ## License
 
 Apache-2.0. The bundled IBM Plex Sans and JetBrains Mono fonts are under the SIL Open Font License; see
