@@ -289,6 +289,33 @@ impl Styleguide {
         }
     }
 
+    /// Every problem with the examples' ids: an id names the example's
+    /// snapshot directory, so it must be relative path segments without `.`
+    /// or `..`, and unique.
+    pub(crate) fn id_errors(&self) -> Vec<String> {
+        let mut errors = Vec::new();
+        for (index, example) in self.examples.iter().enumerate() {
+            let id = example.id();
+            let unsafe_segment = id.split('/').any(|segment| {
+                segment.is_empty()
+                    || segment == "."
+                    || segment == ".."
+                    || segment.contains(['\\', ':'])
+                    || segment.chars().any(char::is_control)
+            });
+            if unsafe_segment {
+                errors.push(format!(
+                    "example id `{id}` must be `/`-separated names without empty, `.` or `..` \
+                     segments, `\\` or `:`"
+                ));
+            }
+            if self.examples[..index].iter().any(|other| other.id() == id) {
+                errors.push(format!("example id `{id}` is used more than once"));
+            }
+        }
+        errors
+    }
+
     pub fn example(mut self, example: Example) -> Self {
         self.examples.push(example);
         self
@@ -436,4 +463,38 @@ pub(crate) fn log_error(message: &str) {
     web_sys::console::error_1(&format!("styleguide: {message}").into());
     #[cfg(not(all(feature = "web", target_family = "wasm")))]
     eprintln!("styleguide: {message}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn guide(ids: &[&str]) -> Styleguide {
+        Styleguide::new("test").examples(
+            ids.iter()
+                .map(|id| Example::new(id.to_string(), |_, _, _| gpui::div())),
+        )
+    }
+
+    #[test]
+    fn ids_must_be_safe_and_unique() {
+        assert!(
+            guide(&["button/primary", "button/ghost"])
+                .id_errors()
+                .is_empty()
+        );
+        for id in [
+            "../escape",
+            "a/../b",
+            "/abs",
+            "a//b",
+            "",
+            "a\\b",
+            "C:/x",
+            "a/.",
+        ] {
+            assert_eq!(guide(&[id]).id_errors().len(), 1, "{id:?}");
+        }
+        assert_eq!(guide(&["a", "a"]).id_errors().len(), 1);
+    }
 }

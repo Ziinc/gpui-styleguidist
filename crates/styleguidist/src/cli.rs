@@ -31,6 +31,9 @@ commands:
 pub fn main(guide: Styleguide) {
     #[cfg(target_family = "wasm")]
     {
+        for error in guide.id_errors() {
+            crate::guide::log_error(&error);
+        }
         if let Err(error) = gallery(guide, None, None) {
             crate::guide::log_error(&format!("{error:#}"));
         }
@@ -44,6 +47,10 @@ pub fn main(guide: Styleguide) {
 
 #[cfg(not(target_family = "wasm"))]
 fn run(guide: Styleguide, args: Vec<String>) -> anyhow::Result<()> {
+    let errors = guide.id_errors();
+    if !errors.is_empty() {
+        anyhow::bail!("{}", errors.join("\n"));
+    }
     let mut args = args.into_iter();
     let command = args.next().unwrap_or_else(|| "gallery".into());
     let mut filter = None;
