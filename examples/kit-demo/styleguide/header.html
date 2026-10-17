@@ -19,6 +19,14 @@
 .gpui-styleguide .gsg-missing{padding:.6em .8em;font-size:.9em}
 .gpui-styleguide iframe{display:block;width:100%;height:520px;border:0;border-top:1px solid var(--border-color,#ddd)}
 .gpui-styleguide.gsg-enhanced .gsg-variants{display:none}
+.gpui-styleguide .gsg-states{border-top:1px solid var(--border-color,#ddd);padding:.4em .8em .8em}
+.gpui-styleguide .gsg-states-title{font-size:.85em;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
+.gpui-styleguide .gsg-state-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(18em,1fr));gap:.8em;margin-top:.6em}
+.gpui-styleguide .gsg-state{margin:0;min-width:0;border:1px solid var(--border-color,#ddd);border-radius:4px;overflow:hidden}
+.gpui-styleguide .gsg-state figcaption{display:flex;justify-content:space-between;align-items:center;padding:.3em .6em;font-size:.9em;border-bottom:1px solid var(--border-color,#ddd)}
+.gpui-styleguide .gsg-state .gsg-copy{position:static;font-size:.8em}
+.gpui-styleguide .gsg-state pre{margin:0;padding:.6em;background:var(--code-block-background-color,#f5f5f5);overflow-x:auto;font-size:.85em}
+.gpui-styleguide img[hidden]{display:none}
 </style>
 <script>
 // gpui-styleguidist: turns each pre-rendered preview into a small playground.
@@ -69,6 +77,11 @@
     var main = root.querySelector(".gsg-preview img");
     var code = root.querySelector(".gsg-code code");
     if (code) code.parentNode.parentNode.insertBefore(copyButton(code), code.parentNode);
+    var stateImages = root.querySelectorAll(".gsg-state img");
+    root.querySelectorAll(".gsg-state pre code").forEach(function (stateCode) {
+      var copy = copyButton(stateCode);
+      stateCode.parentNode.parentNode.querySelector("figcaption").appendChild(copy);
+    });
     var images = {};
     root.querySelectorAll("img[data-key]").forEach(function (img) {
       images[img.dataset.theme + "\u0000" + img.dataset.key] = img;
@@ -99,6 +112,9 @@
     }
     function update() {
       updateCode();
+      stateImages.forEach(function (img) {
+        img.hidden = img.dataset.theme !== state.theme;
+      });
       var img = images[state.theme + "\u0000" + key()];
       if (img) {
         main.src = img.src;
@@ -190,7 +206,7 @@
     }
 
     if (bar.childNodes.length > 1 || data.playground) {
-      root.insertBefore(bar, root.querySelector("details"));
+      root.insertBefore(bar, root.querySelector("details, .gsg-states"));
       root.classList.add("gsg-enhanced");
     }
   }

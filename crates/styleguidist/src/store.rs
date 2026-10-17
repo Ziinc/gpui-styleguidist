@@ -81,16 +81,32 @@ struct Location(Option<std::path::PathBuf>);
 
 #[cfg(not(target_family = "wasm"))]
 impl Location {
-    fn new(_: &str) -> Self {
+    /// `<executable>.<guide name>.knobs.json`: crates in one workspace build
+    /// their styleguide examples to the same executable path.
+    fn new(name: &str) -> Self {
+        let name: String = name
+            .chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '-' })
+            .collect();
         Self(std::env::current_exe().ok().map(|exe| {
             let mut path = exe.into_os_string();
-            path.push(".knobs.json");
+            path.push(format!(".{name}.knobs.json"));
             path.into()
         }))
     }
 
     fn read(&self) -> Option<String> {
-        std::fs::read_to_string(self.0.as_ref()?).ok()
+        let path = self.0.as_ref()?;
+        std::fs::read_to_string(path).ok().or_else(|| {
+            // Knobs saved before the file was named after the guide.
+            let legacy = path
+                .to_str()?
+                .split_once(".knobs.json")?
+                .0
+                .rsplit_once('.')?
+                .0;
+            std::fs::read_to_string(format!("{legacy}.knobs.json")).ok()
+        })
     }
 
     fn write(&self, text: &str) {

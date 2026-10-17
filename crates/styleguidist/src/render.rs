@@ -2,7 +2,7 @@
 
 use crate::{
     Example, Frame, Knobs, Styleguide,
-    knobs::variants,
+    knobs::{parse, variants},
     preview::{Canvas, PADDING},
 };
 use anyhow::{Context as _, Result, anyhow, bail};
@@ -11,10 +11,12 @@ use gpui::{
     WindowOptions, px, size,
 };
 use gpui_styleguidist_manifest::{
-    self as manifest, ExampleEntry, KnobValue, Manifest, VariantEntry, variant_key,
+    self as manifest, ComponentEntry, ExampleEntry, KnobEntry, KnobValue, Manifest, StateEntry,
+    VariantEntry, variant_key,
 };
 use image::RgbaImage;
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     sync::Arc,
@@ -62,6 +64,7 @@ impl<'a> Renderer<'a> {
     pub(crate) fn render(&self, example: &Example) -> Result<(ExampleEntry, Vec<Snapshot>)> {
         let mut cx = self.context();
         let mut knob_specs = Vec::new();
+        let mut states = Vec::new();
         let mut snapshots = Vec::new();
         for theme in &self.guide.themes {
             cx.update(|cx| self.guide.apply_theme(theme, cx));
@@ -70,7 +73,14 @@ impl<'a> Renderer<'a> {
             let discovery = Knobs::default();
             let (image, scale) = self.capture(&mut cx, example, discovery.clone())?;
             knob_specs = discovery.specs();
-            let combos = variants(&knob_specs, self.guide.variant_limit);
+            let mut combos = variants(&knob_specs, self.guide.variant_limit);
+            states = state_values(example, &knob_specs, states.is_empty());
+            // Every named state gets a snapshot, even past the variant limit.
+            for state in states.clone() {
+                if !combos.contains(&state) {
+                    combos.push(state);
+                }
+            }
 
             for (index, values) in combos.into_iter().enumerate() {
                 let (image, scale) = if index == 0 {
@@ -123,6 +133,20 @@ impl<'a> Renderer<'a> {
             component: example.component_name().map(|name| name.to_string()),
             description: example.description_text().to_string(),
             code: example.code_template().to_vec(),
+            states: example
+                .states()
+                .iter()
+                .zip(states)
+                .map(|((name, _), values)| StateEntry {
+                    name: name.to_string(),
+                    key: variant_key(
+                        knob_specs
+                            .iter()
+                            .map(|spec| (spec.name.as_str(), &values[&spec.name])),
+                    ),
+                    values,
+                })
+                .collect(),
             knobs: knob_specs,
             themes: self
                 .guide
@@ -191,6 +215,52 @@ impl<'a> Renderer<'a> {
     }
 }
 
+/// Every knob's value in each of `example`'s states: the state's values where
+/// they fit their knob, defaults elsewhere.
+fn state_values(
+    example: &Example,
+    specs: &[KnobEntry],
+    warn: bool,
+) -> Vec<BTreeMap<String, KnobValue>> {
+    example
+        .states()
+        .iter()
+        .map(|(name, values)| {
+            if warn {
+                for (knob, _) in values {
+                    if !specs.iter().any(|spec| &spec.name == knob) {
+                        eprintln!(
+                            "warning: state `{name}` of `{}`: the example reads no knob `{knob}`",
+                            example.id()
+                        );
+                    }
+                }
+            }
+            specs
+                .iter()
+                .map(|spec| {
+                    let raw = values.iter().find(|(knob, _)| *knob == spec.name);
+                    let value = match raw.map(|(_, raw)| (raw, parse(&spec.control, raw))) {
+                        Some((_, Some(value))) => value,
+                        Some((raw, None)) => {
+                            if warn {
+                                eprintln!(
+                                "warning: state `{name}` of `{}`: `{raw}` is not a value of knob `{}`",
+                                example.id(),
+                                spec.name
+                                );
+                            }
+                            spec.default.clone()
+                        }
+                        None => spec.default.clone(),
+                    };
+                    (spec.name.clone(), value)
+                })
+                .collect()
+        })
+        .collect()
+}
+
 /// Crops to the content's bounding box: every pixel that differs from the
 /// canvas color at the top-left corner, plus `margin`.
 fn crop(image: &RgbaImage, margin: u32) -> RgbaImage {
@@ -257,14 +327,34 @@ fn read_manifest(dir: &Path) -> Result<Option<Manifest>> {
     ))
 }
 
+/// The manifest to update: the existing one, or a fresh one when it can't be
+/// read, since `render` rewrites it anyway.
+fn manifest_to_update(dir: &Path) -> Manifest {
+    read_manifest(dir)
+        .unwrap_or_else(|error| {
+            eprintln!("warning: {error:#}; starting a new manifest");
+            None
+        })
+        .unwrap_or_default()
+}
+
 /// `styleguide render`: writes snapshots, the manifest, the rustdoc header and
 /// the rebuild stamp under `styleguide/`.
 pub(crate) fn render(guide: &Styleguide, filter: Option<&str>) -> Result<()> {
     let dir = guide.output_dir();
     let renderer = Renderer::new(guide)?;
-    let mut manifest = read_manifest(&dir)?.unwrap_or_default();
+    let mut manifest = manifest_to_update(&dir);
     manifest.version = manifest::VERSION;
     manifest.playground_url = guide.playground_url.clone();
+    manifest.title = guide.name.to_string();
+    manifest.components = guide
+        .components
+        .iter()
+        .map(|(name, description)| ComponentEntry {
+            name: name.to_string(),
+            description: description.to_string(),
+        })
+        .collect();
     // Drop examples that no longer exist; keep unselected ones as they are.
     manifest.examples.retain(|entry| {
         guide
@@ -275,7 +365,20 @@ pub(crate) fn render(guide: &Styleguide, filter: Option<&str>) -> Result<()> {
 
     for example in selected(guide, filter) {
         let (entry, snapshots) = renderer.render(example)?;
-        let example_dir = dir.join("snapshots").join(example.id().as_ref());
+        // `id_errors` keeps ids to plain relative segments; never delete
+        // anything outside `snapshots/` regardless.
+        let snapshots_dir = dir.join("snapshots");
+        let example_dir = snapshots_dir.join(example.id().as_ref());
+        if !example_dir.starts_with(&snapshots_dir)
+            || example_dir
+                .components()
+                .any(|part| matches!(part, std::path::Component::ParentDir))
+        {
+            bail!(
+                "example id `{}` leaves the snapshots directory",
+                example.id()
+            );
+        }
         if example_dir.exists() {
             fs::remove_dir_all(&example_dir)?;
         }

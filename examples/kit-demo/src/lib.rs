@@ -277,7 +277,11 @@ pub fn styleguide() -> Styleguide {
             })
             .component("ActionButton")
             .title("Playground")
-            .description("Every prop as a knob."),
+            .description("Every prop as a knob.")
+            .state("Default", [])
+            .state("Disabled", [("disabled", "true")])
+            .state("Loading", [("loading", "true")])
+            .state("Destructive", [("tone", "danger"), ("label", "Delete")]),
         )
         .example(
             example!("action-button/all-tones", |_, _, _| {
@@ -299,7 +303,10 @@ pub fn styleguide() -> Styleguide {
                     .disabled(knobs.bool("disabled", false))
             })
             .component("SettingRow")
-            .title("Notifications"),
+            .title("Notifications")
+            .state("On", [])
+            .state("Off", [("checked", "false")])
+            .state("Managed", [("disabled", "true")]),
         )
         .example(
             example!("setting-row/list", |_, _, _| {
@@ -334,9 +341,10 @@ pub fn styleguide() -> Styleguide {
             })
             .component("SearchField")
             .title("Empty and filled")
-            .description(
-                "Changing a knob rebuilds the view and its InputState. Click it and type.",
-            ),
+            .description("Changing a knob rebuilds the view and its InputState. Click it and type.")
+            .state("Empty", [])
+            .state("Filled", [("value", "invoice")])
+            .state("Compact", [("small", "true")]),
         );
     match std::env::var("STYLEGUIDE_PLAYGROUND_URL") {
         Ok(url) if !url.is_empty() => guide.playground_url(url),

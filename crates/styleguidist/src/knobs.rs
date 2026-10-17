@@ -65,6 +65,13 @@ impl Knobs {
             options.contains(&default),
             "knob `{name}`: default `{default}` is not one of its options"
         );
+        debug_assert!(
+            options
+                .iter()
+                .enumerate()
+                .all(|(index, option)| !options[..index].contains(option)),
+            "knob `{name}`: options {options:?} repeat a label"
+        );
         let control = KnobControl::Select {
             options: options.iter().map(|option| option.to_string()).collect(),
         };
@@ -118,6 +125,14 @@ impl Knobs {
     /// A number in `range`, edited in `step` increments. Snapshots show only
     /// `default`.
     pub fn number(&self, name: &str, default: f64, range: RangeInclusive<f64>, step: f64) -> f64 {
+        debug_assert!(
+            range.start().is_finite() && range.end().is_finite() && range.start() <= range.end(),
+            "knob `{name}`: range {range:?} must be finite and not empty"
+        );
+        debug_assert!(
+            range.contains(&default),
+            "knob `{name}`: default {default} is outside {range:?}"
+        );
         let control = KnobControl::Number {
             min: *range.start(),
             max: *range.end(),
@@ -186,7 +201,7 @@ impl Knobs {
     }
 }
 
-fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
+pub(crate) fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
     match control {
         KnobControl::Bool => raw.parse().ok().map(KnobValue::Bool),
         KnobControl::Select { options } => options
@@ -194,7 +209,12 @@ fn parse(control: &KnobControl, raw: &str) -> Option<KnobValue> {
             .any(|option| option == raw)
             .then(|| KnobValue::Text(raw.into())),
         KnobControl::Text { .. } => Some(KnobValue::Text(raw.into())),
-        KnobControl::Number { .. } => raw.parse().ok().map(KnobValue::Number),
+        // As the knob reads it: finite, within its range.
+        KnobControl::Number { min, max, .. } => raw
+            .parse::<f64>()
+            .ok()
+            .filter(|value| value.is_finite())
+            .map(|value| KnobValue::Number(value.clamp(*min, *max))),
     }
 }
 
@@ -260,6 +280,19 @@ pub(crate) fn variants(specs: &[KnobEntry], limit: usize) -> Vec<BTreeMap<String
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn number_values_from_links_stay_finite_and_in_range() {
+        let control = KnobControl::Number {
+            min: 0.0,
+            max: 10.0,
+            step: 1.0,
+        };
+        assert_eq!(parse(&control, "NaN"), None);
+        assert_eq!(parse(&control, "-inf"), None);
+        assert_eq!(parse(&control, "1e308"), Some(KnobValue::Number(10.0)));
+        assert_eq!(parse(&control, "4"), Some(KnobValue::Number(4.0)));
+    }
 
     fn knobs() -> Knobs {
         let knobs = Knobs::default();

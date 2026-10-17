@@ -1,6 +1,20 @@
 {
   "version": 1,
-  "playground_url": null,
+  "title": "Kit demo",
+  "components": [
+    {
+      "name": "ActionButton",
+      "description": "A labelled command button. Its tone says what the action does: Primary for the one action a surface exists for, Neutral for the rest, Danger for actions that destroy data."
+    },
+    {
+      "name": "SettingRow",
+      "description": "One preference in a settings list: a title, an optional explanation and a switch."
+    },
+    {
+      "name": "SearchField",
+      "description": "A search box that owns its InputState, so its examples are stateful views."
+    }
+  ],
   "examples": [
     {
       "id": "action-button/tones",
@@ -91,6 +105,52 @@
           "name": "loading",
           "type": "bool",
           "default": false
+        }
+      ],
+      "states": [
+        {
+          "name": "Default",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          }
+        },
+        {
+          "name": "Disabled",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=true,loading=false",
+          "values": {
+            "disabled": true,
+            "label": "Save changes",
+            "loading": false,
+            "size": "medium",
+            "tone": "primary"
+          }
+        },
+        {
+          "name": "Loading",
+          "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=true",
+          "values": {
+            "disabled": false,
+            "label": "Save changes",
+            "loading": true,
+            "size": "medium",
+            "tone": "primary"
+          }
+        },
+        {
+          "name": "Destructive",
+          "key": "label=Delete,tone=danger,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Delete",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          }
         }
       ],
       "themes": [
@@ -228,6 +288,22 @@
           "hash": "9309bafa7526ef30"
         },
         {
+          "theme": "light",
+          "key": "label=Delete,tone=danger,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Delete",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/light/label=Delete,tone=danger.png",
+          "width": 98,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "d9487f608b08c0f1"
+        },
+        {
           "theme": "dark",
           "key": "label=Save changes,tone=primary,size=medium,disabled=false,loading=false",
           "values": {
@@ -355,6 +431,22 @@
           "height": 64,
           "scale": 2.0,
           "hash": "53ddf1a9e5fcad39"
+        },
+        {
+          "theme": "dark",
+          "key": "label=Delete,tone=danger,size=medium,disabled=false,loading=false",
+          "values": {
+            "disabled": false,
+            "label": "Delete",
+            "loading": false,
+            "size": "medium",
+            "tone": "danger"
+          },
+          "file": "snapshots/action-button/tones/dark/label=Delete,tone=danger.png",
+          "width": 98,
+          "height": 64,
+          "scale": 2.0,
+          "hash": "1bb02ab142fdeb38"
         }
       ]
     },
@@ -454,6 +546,38 @@
           "name": "disabled",
           "type": "bool",
           "default": false
+        }
+      ],
+      "states": [
+        {
+          "name": "On",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=false",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          }
+        },
+        {
+          "name": "Off",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=false,disabled=false",
+          "values": {
+            "checked": false,
+            "description": "Send me a summary every morning.",
+            "disabled": false,
+            "title": "Notifications"
+          }
+        },
+        {
+          "name": "Managed",
+          "key": "title=Notifications,description=Send me a summary every morning.,checked=true,disabled=true",
+          "values": {
+            "checked": true,
+            "description": "Send me a summary every morning.",
+            "disabled": true,
+            "title": "Notifications"
+          }
         }
       ],
       "themes": [
@@ -671,6 +795,35 @@
           "name": "small",
           "type": "bool",
           "default": false
+        }
+      ],
+      "states": [
+        {
+          "name": "Empty",
+          "key": "placeholder=Search files…,value=,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": ""
+          }
+        },
+        {
+          "name": "Filled",
+          "key": "placeholder=Search files…,value=invoice,small=false",
+          "values": {
+            "placeholder": "Search files…",
+            "small": false,
+            "value": "invoice"
+          }
+        },
+        {
+          "name": "Compact",
+          "key": "placeholder=Search files…,value=,small=true",
+          "values": {
+            "placeholder": "Search files…",
+            "small": true,
+            "value": ""
+          }
         }
       ],
       "themes": [

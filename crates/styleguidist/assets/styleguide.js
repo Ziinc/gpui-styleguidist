@@ -46,6 +46,11 @@
     var main = root.querySelector(".gsg-preview img");
     var code = root.querySelector(".gsg-code code");
     if (code) code.parentNode.parentNode.insertBefore(copyButton(code), code.parentNode);
+    var stateImages = root.querySelectorAll(".gsg-state img");
+    root.querySelectorAll(".gsg-state pre code").forEach(function (stateCode) {
+      var copy = copyButton(stateCode);
+      stateCode.parentNode.parentNode.querySelector("figcaption").appendChild(copy);
+    });
     var images = {};
     root.querySelectorAll("img[data-key]").forEach(function (img) {
       images[img.dataset.theme + "\u0000" + img.dataset.key] = img;
@@ -76,6 +81,9 @@
     }
     function update() {
       updateCode();
+      stateImages.forEach(function (img) {
+        img.hidden = img.dataset.theme !== state.theme;
+      });
       var img = images[state.theme + "\u0000" + key()];
       if (img) {
         main.src = img.src;
@@ -167,7 +175,7 @@
     }
 
     if (bar.childNodes.length > 1 || data.playground) {
-      root.insertBefore(bar, root.querySelector("details"));
+      root.insertBefore(bar, root.querySelector("details, .gsg-states"));
       root.classList.add("gsg-enhanced");
     }
   }

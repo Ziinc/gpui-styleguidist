@@ -21,6 +21,7 @@ pub struct Example {
     component: Option<SharedString>,
     description: SharedString,
     code: Vec<CodePart>,
+    states: Vec<(SharedString, Vec<(String, String)>)>,
     size: Option<Size<Pixels>>,
     build: BuildFn,
 }
@@ -70,6 +71,7 @@ impl Example {
             component: None,
             description: SharedString::default(),
             code: Vec::new(),
+            states: Vec::new(),
             size: None,
             build,
         }
@@ -106,6 +108,30 @@ impl Example {
     /// example's source.
     pub fn code(mut self, code: Vec<CodePart>) -> Self {
         self.code = code;
+        self
+    }
+
+    /// A named state of the component, such as "Disabled": the knob values
+    /// that produce it, written as a link would carry them. Knobs it leaves
+    /// out keep their defaults. The component page and rustdoc show every
+    /// state side by side, each with the code that produces it.
+    ///
+    /// ```ignore
+    /// example!("button/playground", |knobs, _, _| { … })
+    ///     .state("Default", [])
+    ///     .state("Disabled", [("disabled", "true")])
+    ///     .state("Destructive", [("tone", "danger"), ("label", "Delete")])
+    /// ```
+    pub fn state<'a>(
+        mut self,
+        name: impl Into<SharedString>,
+        values: impl IntoIterator<Item = (&'a str, &'a str)>,
+    ) -> Self {
+        let values = values
+            .into_iter()
+            .map(|(knob, value)| (knob.to_string(), value.to_string()))
+            .collect();
+        self.states.push((name.into(), values));
         self
     }
 
@@ -150,6 +176,11 @@ impl Example {
 
     pub fn description_text(&self) -> &SharedString {
         &self.description
+    }
+
+    /// The named states, in the order given.
+    pub fn states(&self) -> &[(SharedString, Vec<(String, String)>)] {
+        &self.states
     }
 
     /// The code template, knob slots included.
@@ -256,6 +287,33 @@ impl Styleguide {
             crate_dir: None,
             variant_limit: 24,
         }
+    }
+
+    /// Every problem with the examples' ids: an id names the example's
+    /// snapshot directory, so it must be relative path segments without `.`
+    /// or `..`, and unique.
+    pub(crate) fn id_errors(&self) -> Vec<String> {
+        let mut errors = Vec::new();
+        for (index, example) in self.examples.iter().enumerate() {
+            let id = example.id();
+            let unsafe_segment = id.split('/').any(|segment| {
+                segment.is_empty()
+                    || segment == "."
+                    || segment == ".."
+                    || segment.contains(['\\', ':'])
+                    || segment.chars().any(char::is_control)
+            });
+            if unsafe_segment {
+                errors.push(format!(
+                    "example id `{id}` must be `/`-separated names without empty, `.` or `..` \
+                     segments, `\\` or `:`"
+                ));
+            }
+            if self.examples[..index].iter().any(|other| other.id() == id) {
+                errors.push(format!("example id `{id}` is used more than once"));
+            }
+        }
+        errors
     }
 
     pub fn example(mut self, example: Example) -> Self {
@@ -405,4 +463,38 @@ pub(crate) fn log_error(message: &str) {
     web_sys::console::error_1(&format!("styleguide: {message}").into());
     #[cfg(not(all(feature = "web", target_family = "wasm")))]
     eprintln!("styleguide: {message}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn guide(ids: &[&str]) -> Styleguide {
+        Styleguide::new("test").examples(
+            ids.iter()
+                .map(|id| Example::new(id.to_string(), |_, _, _| gpui::div())),
+        )
+    }
+
+    #[test]
+    fn ids_must_be_safe_and_unique() {
+        assert!(
+            guide(&["button/primary", "button/ghost"])
+                .id_errors()
+                .is_empty()
+        );
+        for id in [
+            "../escape",
+            "a/../b",
+            "/abs",
+            "a//b",
+            "",
+            "a\\b",
+            "C:/x",
+            "a/.",
+        ] {
+            assert_eq!(guide(&[id]).id_errors().len(), 1, "{id:?}");
+        }
+        assert_eq!(guide(&["a", "a"]).id_errors().len(), 1);
+    }
 }

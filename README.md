@@ -56,7 +56,10 @@ pub fn styleguide() -> Styleguide {
                     .disabled(knobs.bool("disabled", false))
             })
             .component("Button")
-            .description("Use one primary button per surface."),
+            .description("Use one primary button per surface.")
+            .state("Default", [])
+            .state("Disabled", [("disabled", "true")])
+            .state("Compact", [("size", "small"), ("label", "OK")]),
         )
 }
 ```
@@ -74,11 +77,21 @@ pub fn styleguide() -> Styleguide {
   `pick`, `text`, `text_samples` and `number`. The gallery shows a control for each
   one, and `render` snapshots every finite combination (bools, selects, text
   samples) up to `variant_limit`.
+- **Example ids are paths.** An id names the example's snapshot directory,
+  so it is `/`-separated names, with no empty, `.` or `..` segment, and is
+  unique. Every command refuses to run otherwise.
 - **`example!(…)` is for stateless elements.** `example!(view …)` is for
   components that need an entity, such as an input's `InputState`. It is
   rebuilt on every knob change.
 - **Knobs build the props table.** The knobs a component's examples read make
   up its "Props & methods" table.
+- **States document several looks on one page.** Each `.state(name, values)`
+  is a set of knob values written as a link carries them; knobs it leaves
+  out keep their defaults. The component page and rustdoc show every state
+  side by side, each with its own preview and the code that produces it, and
+  `render` snapshots every state even past `variant_limit`.
+- **The sidebar lists one page per component.** A component appears once it
+  has examples; a `describe` alone adds no page.
 
 The entry point is an ordinary example target:
 
@@ -131,6 +144,28 @@ On the web:
 - **Assets must work in the browser.** gpui-kit fetches icons over HTTP on the
   web (see the demo's `assets()`).
 
+## Documentation for language models
+
+```sh
+cargo styleguide llms                         # target/styleguide/<package>/
+cargo styleguide llms --out-dir docs/llms     # llms.txt, llms-full.txt, llms/*.md
+cargo styleguide llms --out-file COMPONENTS.md
+cargo styleguide llms --out-file - | pbcopy   # stdout
+```
+
+This reads `styleguide/manifest.json`, so run `render` first. It writes:
+
+- **`llms.txt`**, an [llms.txt](https://llmstxt.org) index linking each
+  component's page.
+- **`llms/<Component>.md`**, one page per component. It has the description,
+  a props table with each prop's builder method, type, values and default,
+  and Rust code for every example and state.
+- **`llms-full.txt`**, every page in one file. `--out-file` writes only this.
+
+`cargo styleguide build` adds the same files to the site when the manifest
+exists. `--out-dir` sets where `build`, `serve` and `llms` write; `--out` is
+the same option.
+
 ## Reloading while you work
 
 ```sh
@@ -150,7 +185,8 @@ Both watch the package and every local crate it builds from.
 - **Knobs never reset on their own.** Every value you set is remembered per
   example, across reloads, rebuilds, theme switches and navigation, until you
   press "Reset knobs". The web keeps them in `localStorage`; natively they
-  sit next to the styleguide executable in `<executable>.knobs.json`.
+  sit next to the styleguide executable in
+  `<executable>.<styleguide name>.knobs.json`.
 
 This rebuilds and restarts; it does not patch the running code.
 [subsecond](https://crates.io/crates/subsecond) hot-patching only patches the
