@@ -793,7 +793,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-styleguide"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "gpui-styleguidist-manifest",
@@ -3071,7 +3071,7 @@ checksum = "4b0d73e1bc02eef886a5947f41b8512708792e9e5d3053d181843311a487f96f"
 
 [[package]]
 name = "gpui-styleguidist"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "gpui-pre",
@@ -3088,7 +3088,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-styleguidist-macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "gpui-styleguidist-manifest",
@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "gpui-styleguidist-manifest"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -3774,7 +3774,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kit-demo"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gpui-kit",
  "gpui-styleguidist",
