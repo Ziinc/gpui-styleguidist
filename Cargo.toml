@@ -3,15 +3,15 @@ resolver = "2"
 members = ["crates/styleguidist", "crates/macros", "crates/manifest", "crates/cli", "examples/kit-demo"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "Apache-2.0"
 repository = "https://github.com/Ziinc/gpui-styleguidist"
 
 [workspace.dependencies]
-gpui-styleguidist = { path = "crates/styleguidist", version = "0.1.0", default-features = false }
-gpui-styleguidist-macros = { path = "crates/macros", version = "0.1.0" }
-gpui-styleguidist-manifest = { path = "crates/manifest", version = "0.1.0" }
+gpui-styleguidist = { path = "crates/styleguidist", version = "0.1.1", default-features = false }
+gpui-styleguidist-macros = { path = "crates/macros", version = "0.1.1" }
+gpui-styleguidist-manifest = { path = "crates/manifest", version = "0.1.1" }
 # The exact gpui-pre snapshot gpui-kit 0.7.3 is built against. Any snapshot can
 # change GPUI's API, so consumers must use the same one; bump them together.
 gpui = { package = "gpui-pre", version = "=0.3.9" }

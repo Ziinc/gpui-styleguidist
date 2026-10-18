@@ -1,5 +1,7 @@
 # gpui-styleguidist
 
+![The web styleguide: knobs, View code, the states grid and a dark preview](docs/demo.gif)
+
 A living styleguide for [GPUI](https://www.gpui.rs) components, in the spirit of
 [React Styleguidist](https://react-styleguidist.js.org). You write examples of your
 components with **knobs** for their props, and you get:
