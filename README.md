@@ -1,33 +1,55 @@
 # gpui-styleguidist
 
+**Write one example per GPUI component. Get a live web playground, previews on
+docs.rs, copy-pasteable code and visual regression tests from it.**
+
 ![The web styleguide: knobs, View code, the states grid and a dark preview](docs/demo.gif)
 
-A living styleguide for [GPUI](https://www.gpui.rs) components, in the spirit of
-[React Styleguidist](https://react-styleguidist.js.org). You write examples of your
-components with **knobs** for their props, and you get:
+_The kit-demo styleguide running in a browser as WebAssembly: knobs change the
+live component, "View code" prints the Rust for the current values, and every
+documented state sits on one page with its own code.
+[Try it live](https://gpui-styleguidist.tznc.net/demo/)._
 
-- **A Styleguidist-style playground on the web.** `cargo styleguide build`
-  compiles your styleguide to WebAssembly and writes a static site to host
-  anywhere. It has a sidebar of components with a filter, and a page per
-  component with its description, a props table and live examples. Each
-  example has knobs and "View code", which shows the code for the current
-  knob values, ready to copy. Links look like `#/Button` for a
-  component, or `#!/button/primary?disabled=true` for one example in isolation.
-- **The same styleguide natively.** `cargo run --example styleguide` opens it
-  in a window.
-- **Previews in rustdoc and on docs.rs.** `-- render` renders every example,
-  theme and knob combination headlessly to PNGs under `styleguide/`.
-  `#[preview("button/primary")]` embeds them in an item's docs. The generated
-  `styleguide/header.html` turns each preview into a small playground: knobs
-  swap snapshots and rewrite "View code" with a Copy button, and "Open live playground"
-  embeds the hosted wasm example in an iframe. docs.rs serves rustdoc pages
-  without a Content-Security-Policy, so all of this works there.
-- **Visual regression tests.** `-- check` re-renders the snapshots in CI and
-  fails on pixel changes.
+gpui-styleguidist is [React Styleguidist](https://react-styleguidist.js.org)
+for [GPUI](https://www.gpui.rs). You describe a component once, as an ordinary
+Rust closure that reads its props from **knobs**. Every output below comes from
+that one closure, so the docs cannot drift from the code.
+
+- **Your team can try every prop without building the app.**
+  `cargo styleguide build` compiles the styleguide to WebAssembly and writes a
+  static site you can host anywhere: a filterable sidebar, a page per component
+  with its description and props table, and live examples. Each example links
+  by URL, such as `#/Button` or `#!/button/primary?disabled=true`.
+- **The code on the page compiles.** "View code" shows the closure with each
+  knob replaced by its current value, for example
+  `.with_size(Size::Small).disabled(true)`, and Copy puts it on the clipboard.
+- **Your docs.rs pages show the component, not just its signature.**
+  `-- render` snapshots every example, theme and knob combination to PNGs.
+  `#[preview("button/primary")]` embeds them in rustdoc, where knobs swap the
+  snapshots and update the code. docs.rs serves rustdoc without a
+  Content-Security-Policy, so all of this works there.
+- **CI catches visual changes.** `-- check` re-renders every snapshot and fails
+  on any pixel difference.
+- **Every state is documented on one page.** `.state("Disabled", [("disabled",
+  "true")])` adds a named state with its own preview and code.
+- **Language models get your components too.** `cargo styleguide llms` writes an
+  [llms.txt](https://llmstxt.org) index and a Markdown page per component, with
+  its props, defaults and the Rust for every example.
+- **Edits show up without losing your place.** `cargo styleguide dev` and
+  `serve --watch` rebuild on save and reopen at the same example, theme and
+  knob values. Knobs never reset unless you press "Reset knobs".
 
 It works with any GPUI component library. The demo in
 [`examples/kit-demo`](examples/kit-demo) documents components built on
 [gpui-kit](https://gpui-kit.com).
+
+## Get started
+
+1. Add the crate and an example target (see [Writing examples](#writing-examples)).
+2. Run `cargo run --example styleguide` to open the styleguide in a window.
+3. Run `cargo styleguide serve` to see it in the browser.
+4. Run `cargo run --example styleguide -- render` and commit `styleguide/` to
+   get the docs.rs previews and the CI check.
 
 ## Writing examples
 
@@ -243,6 +265,21 @@ uses (`=0.3.9`). Your crate must resolve the same GPUI.
 | `crates/manifest` | The snapshot manifest format shared by the runtime and the macros |
 | `crates/cli` | `cargo-styleguide`: the wasm static-site builder and preview server |
 | `examples/kit-demo` | gpui-kit components documented end to end, with committed snapshots |
+| `website` | The Docusaurus landing page, built from this README |
+
+## Website
+
+[gpui-styleguidist.tznc.net](https://gpui-styleguidist.tznc.net) is this README
+as a [Docusaurus](https://docusaurus.io) page (`website/`), with the kit-demo
+styleguide at [`/demo/`](https://gpui-styleguidist.tznc.net/demo/). The Pages
+workflow builds both and deploys them to the `gpui-styleguidist` Cloudflare
+Pages project on every push to main, and to a preview branch for pull requests.
+It needs the `CLOUDFLARE_API_TOKEN` (Cloudflare Pages: Edit) and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets.
+
+```sh
+cd website && npm install && npm start   # the landing page; edit README.md, not website/
+```
 
 ## Releasing
 

@@ -1,0 +1,7 @@
+node_modules/
+build/
+.docusaurus/
+# Generated from ../README.md by scripts/sync-readme.mjs.
+src/pages/_readme.mdx
+src/readme-hero.json
+static/img/demo.gif
