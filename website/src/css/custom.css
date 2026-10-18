@@ -1,0 +1,43 @@
+:root {
+  --ifm-color-primary: #1f5fbf;
+  --ifm-color-primary-dark: #1c56ac;
+  --ifm-color-primary-darker: #1a51a2;
+  --ifm-color-primary-darkest: #164386;
+  --ifm-color-primary-light: #2268d2;
+  --ifm-color-primary-lighter: #246ddc;
+  --ifm-color-primary-lightest: #3d7fe2;
+  --ifm-font-family-base: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ifm-code-font-size: 90%;
+  --ifm-background-color: #fbfbfc;
+  --gsg-hero-bg: #f2f4f8;
+  --gsg-shadow: 0 18px 40px -24px rgb(20 40 80 / 45%);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #6ea2f0;
+  --ifm-color-primary-dark: #5191ed;
+  --ifm-color-primary-darker: #4389eb;
+  --ifm-color-primary-darkest: #1d6fe4;
+  --ifm-color-primary-light: #8bb3f3;
+  --ifm-color-primary-lighter: #99bcf4;
+  --ifm-color-primary-lightest: #c3d7f8;
+  --ifm-background-color: #15171c;
+  --gsg-hero-bg: #1b1e25;
+  --gsg-shadow: 0 18px 40px -24px rgb(0 0 0 / 80%);
+}
+
+.markdown h2 {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--ifm-toc-border-color);
+}
+
+.markdown > h2:first-of-type {
+  margin-top: 2rem;
+}
+
+/* Live demo is a page on this site, not an external one. */
+.navbar-demo-link svg {
+  display: none;
+}

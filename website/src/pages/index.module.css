@@ -1,0 +1,94 @@
+.hero {
+  padding-block: 4.5rem 3rem;
+  background: var(--gsg-hero-bg);
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ifm-color-primary);
+}
+
+.headline {
+  max-width: 20ch;
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 3.6rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.subhead {
+  max-width: 52ch;
+  margin: 1.1rem 0 0;
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+  line-height: 1.5;
+  color: var(--ifm-color-emphasis-800);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-block: 2rem 2.5rem;
+}
+
+.install {
+  padding: 0.55rem 0.8rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--ifm-toc-border-color);
+  background: var(--ifm-background-color);
+}
+
+.figure {
+  margin: 0;
+}
+
+.figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: 10px;
+  box-shadow: var(--gsg-shadow);
+}
+
+.figure figcaption {
+  max-width: 72ch;
+  margin-top: 0.9rem;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin: 2.5rem 0 0;
+}
+
+.facts div {
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--ifm-color-primary);
+}
+
+.facts dt {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.facts dd {
+  margin: 0.4rem 0 0;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.readme {
+  min-width: 0;
+}

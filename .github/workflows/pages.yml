@@ -1,0 +1,92 @@
+name: Pages
+
+# Publishes gpui-styleguidist.tznc.net to Cloudflare Pages: the README as a
+# Docusaurus one-pager at `/` and the kit-demo web styleguide at `/demo/`.
+# Pushes to main deploy production; pull requests from this repository deploy
+# a preview branch.
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - README.md
+      - docs/**
+      - website/**
+      - crates/**
+      - examples/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/pages.yml
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+# Production deploys queue; a newer push to a PR replaces its pending preview.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-bindgen-cli
+        run: |
+          version=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+          cargo install wasm-bindgen-cli --version "$version" --locked
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Build the landing page
+        working-directory: website
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
+      - name: Build the demo styleguide
+        run: cargo run -p cargo-styleguide -- styleguide build -p kit-demo --profile styleguide --out website/build/demo
+
+      # Fork PRs get no secrets, and nothing deploys until the secrets are
+      # set, so those runs stop after the build.
+      - name: Check for Cloudflare secrets
+        id: secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the deploy"
+          fi
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        if: steps.secrets.outputs.deploy == 'true'
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Creates the project on the first run; later runs find it exists.
+          preCommands: npx wrangler pages project create gpui-styleguidist --production-branch=main || true
+          command: pages deploy build --project-name=gpui-styleguidist --branch=${{ github.event_name == 'pull_request' && format('preview-{0}', github.event.pull_request.number) || 'main' }}
+          workingDirectory: website
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
