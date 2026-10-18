@@ -7,7 +7,7 @@
     "start": "npm run sync && docusaurus start",
     "build": "npm run sync && docusaurus build",
     "serve": "docusaurus serve",
-    "typecheck": "tsc"
+    "typecheck": "npm run sync && tsc"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",
