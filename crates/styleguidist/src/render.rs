@@ -182,6 +182,7 @@ impl<'a> Renderer<'a> {
             ..Default::default()
         };
         let background = self.guide.background.clone();
+        let foreground = self.guide.foreground.clone();
         let handle: AnyWindowHandle = cx.update(|cx| {
             let build = example.builder();
             let frame: crate::FrameBuilder = Box::new(move |window, cx| {
@@ -189,6 +190,7 @@ impl<'a> Renderer<'a> {
                 let canvas = cx.new(|_| Canvas {
                     content,
                     background,
+                    foreground,
                     fill: fixed.is_some(),
                 });
                 cx.new(|_| Frame::new(canvas.into()))

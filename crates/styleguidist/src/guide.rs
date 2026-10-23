@@ -237,6 +237,8 @@ pub type FrameBuilder = Box<dyn FnOnce(&mut Window, &mut App) -> Entity<Frame>>;
 
 type SetupFn = Rc<dyn Fn(&mut App)>;
 type ThemeFn = Rc<dyn Fn(&str, &mut App)>;
+/// A color read from the theme when a preview renders.
+pub(crate) type ColorFn = Rc<dyn Fn(&App) -> Hsla>;
 
 pub(crate) type OpenWindowFn =
     Rc<dyn Fn(WindowOptions, FrameBuilder, &mut App) -> anyhow::Result<AnyWindowHandle>>;
@@ -262,6 +264,7 @@ pub struct Styleguide {
     pub(crate) themes: Vec<SharedString>,
     pub(crate) apply_theme: Option<ThemeFn>,
     pub(crate) background: Rc<dyn Fn(&App) -> Hsla>,
+    pub(crate) foreground: Option<ColorFn>,
     pub(crate) assets: Option<Arc<dyn AssetSource>>,
     pub(crate) fonts: Vec<Cow<'static, [u8]>>,
     pub(crate) playground_url: Option<String>,
@@ -280,6 +283,7 @@ impl Styleguide {
             themes: vec!["default".into()],
             apply_theme: None,
             background: Rc::new(|_| white()),
+            foreground: None,
             assets: None,
             fonts: Vec::new(),
             playground_url: None,
@@ -374,6 +378,14 @@ impl Styleguide {
     /// The canvas color behind previews, usually the theme's background.
     pub fn background(mut self, background: impl Fn(&App) -> Hsla + 'static) -> Self {
         self.background = Rc::new(background);
+        self
+    }
+
+    /// The text color previews inherit, usually the theme's body text. Set
+    /// it with a dark background, or text the components don't color
+    /// themselves stays dark on dark.
+    pub fn foreground(mut self, foreground: impl Fn(&App) -> Hsla + 'static) -> Self {
+        self.foreground = Some(Rc::new(foreground));
         self
     }
 
