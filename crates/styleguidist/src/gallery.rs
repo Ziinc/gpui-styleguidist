@@ -9,7 +9,7 @@
 
 use crate::{
     Example, Frame, Knobs, Styleguide,
-    preview::Canvas,
+    preview::{Canvas, PADDING},
     store::{self, KnobStore},
 };
 use gpui::{
@@ -23,6 +23,13 @@ use gpui_styleguidist_manifest::{KnobControl, KnobEntry, KnobValue};
 use std::{collections::BTreeMap, ops::Range, rc::Rc};
 
 const MONO: &str = "JetBrains Mono";
+
+/// Below this window width the sidebar folds into a menu and blocks stack.
+const NARROW: f32 = 720.;
+
+fn is_narrow(window: &Window) -> bool {
+    window.viewport_size().width < px(NARROW)
+}
 
 /// React Styleguidist's default theme.
 struct Palette {
@@ -104,6 +111,8 @@ pub struct Gallery {
     filter: String,
     filtering: bool,
     filter_focus: FocusHandle,
+    /// The sidebar, opened over the page on a narrow window.
+    menu_open: bool,
 }
 
 impl Gallery {
@@ -138,6 +147,7 @@ impl Gallery {
             filter: String::new(),
             filtering: false,
             filter_focus: cx.focus_handle(),
+            menu_open: false,
         };
         this.navigate(route, window, cx);
         this
@@ -182,6 +192,7 @@ impl Gallery {
         };
         crate::link::publish(&route, self.theme_name());
         self.route = route;
+        self.menu_open = false;
         cx.notify();
     }
 
@@ -210,7 +221,7 @@ impl Gallery {
         }
     }
 
-    fn sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn sidebar(&self, narrow: bool, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = palette();
         let filter = self.filter.to_lowercase();
         let current = match &self.route {
@@ -219,23 +230,31 @@ impl Gallery {
         };
         div()
             .id("styleguide-sidebar")
-            .w(px(240.))
-            .h_full()
+            .map(|this| {
+                if narrow {
+                    this.size_full()
+                } else {
+                    this.w(px(240.)).h_full()
+                }
+            })
             .flex_none()
             .overflow_y_scroll()
             .bg(palette.sidebar)
             .border_r_1()
             .border_color(palette.border)
-            .child(
-                div()
-                    .px_4()
-                    .py_4()
-                    .border_b_1()
-                    .border_color(palette.border)
-                    .text_size(px(18.))
-                    .text_color(palette.base)
-                    .child(self.guide.name.clone()),
-            )
+            // On a narrow window the menu bar above already names the guide.
+            .when(!narrow, |this| {
+                this.child(
+                    div()
+                        .px_4()
+                        .py_4()
+                        .border_b_1()
+                        .border_color(palette.border)
+                        .text_size(px(18.))
+                        .text_color(palette.base)
+                        .child(self.guide.name.clone()),
+                )
+            })
             .child(
                 div().px_4().pt_4().pb_2().child(
                     div()
@@ -291,7 +310,7 @@ impl Gallery {
                             let name = group.name.clone();
                             div()
                                 .id(("styleguide-component", index))
-                                .py_1()
+                                .py(px(if narrow { 8. } else { 4. }))
                                 .text_size(px(15.))
                                 .text_color(palette.link)
                                 .when(selected, |this| this.font_weight(FontWeight::BOLD))
@@ -318,6 +337,7 @@ impl Gallery {
         };
         div()
             .flex()
+            .flex_wrap()
             .items_center()
             .justify_end()
             .gap_3()
@@ -366,40 +386,95 @@ fn resolve(guide: &Styleguide, groups: &[Group], route: Route) -> Option<Route> 
 }
 
 impl Render for Gallery {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = palette();
         let isolated = matches!(self.route, Route::Isolated { .. });
+        let narrow = is_narrow(window);
+        let menu = narrow && !isolated;
+        let menu_open = menu && self.menu_open;
         div()
             .size_full()
             .flex()
+            .when(narrow, |this| this.flex_col())
             .bg(palette.white)
             .text_color(palette.base)
             .text_size(px(15.))
-            .when(!isolated, |this| this.child(self.sidebar(cx)))
+            .when(menu, |this| this.child(self.menu_bar(cx)))
+            .when(!isolated && (!narrow || menu_open), |this| {
+                this.child(self.sidebar(narrow, cx))
+            })
+            .when(!menu_open, |this| {
+                this.child(self.main(isolated, narrow, cx))
+            })
+    }
+}
+
+impl Gallery {
+    /// A narrow window's bar: the guide's name and the menu toggle.
+    fn menu_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = palette();
+        div()
+            .flex()
+            .flex_none()
+            .items_center()
+            .justify_between()
+            .gap_3()
+            .px_4()
+            .py_3()
+            .bg(palette.sidebar)
+            .border_b_1()
+            .border_color(palette.border)
             .child(
                 div()
-                    .id("styleguide-main")
-                    .flex_1()
-                    .h_full()
-                    .overflow_y_scroll()
-                    .child(
-                        div()
-                            .max_w(px(1000.))
-                            .px(px(if isolated { 16. } else { 32. }))
-                            .py(px(if isolated { 12. } else { 16. }))
-                            .flex()
-                            .flex_col()
-                            .gap_2()
-                            .child(self.toolbar(cx))
-                            .map(|this| match self.content.clone() {
-                                Some(content) => this.child(content),
-                                None => this.child(
-                                    div()
-                                        .text_color(palette.light)
-                                        .child("No examples registered."),
-                                ),
-                            }),
-                    ),
+                    .min_w_0()
+                    .text_size(px(18.))
+                    .text_color(palette.base)
+                    .child(self.guide.name.clone()),
+            )
+            .child(
+                button(
+                    "styleguide-menu",
+                    if self.menu_open {
+                        "Close"
+                    } else {
+                        "Components"
+                    },
+                    self.menu_open,
+                )
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.menu_open = !this.menu_open;
+                    cx.notify();
+                })),
+            )
+    }
+
+    fn main(&self, isolated: bool, narrow: bool, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = palette();
+        let gutter = if isolated || narrow { 16. } else { 32. };
+        div()
+            .id("styleguide-main")
+            .flex_1()
+            .min_h_0()
+            .min_w_0()
+            .when(!narrow, |this| this.h_full())
+            .overflow_y_scroll()
+            .child(
+                div()
+                    .max_w(px(1000.))
+                    .px(px(gutter))
+                    .py(px(if isolated { 12. } else { 16. }))
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .child(self.toolbar(cx))
+                    .map(|this| match self.content.clone() {
+                        Some(content) => this.child(content),
+                        None => this.child(
+                            div()
+                                .text_color(palette.light)
+                                .child("No examples registered."),
+                        ),
+                    }),
             )
     }
 }
@@ -466,14 +541,15 @@ impl Render for ComponentPage {
         let palette = palette();
         let group = &self.groups[self.group];
         let props = self.props(cx);
+        let narrow = is_narrow(window);
         div()
             .flex()
             .flex_col()
             .gap_4()
             .child(
                 div()
-                    .text_size(px(36.))
-                    .line_height(px(44.))
+                    .text_size(px(if narrow { 28. } else { 36. }))
+                    .line_height(px(if narrow { 34. } else { 44. }))
                     .text_color(palette.base)
                     .child(group.name.clone()),
             )
@@ -704,7 +780,7 @@ fn build_preview(
 }
 
 impl Render for ExampleBlock {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = palette();
         let example = self.example();
         let id = example.id().clone();
@@ -722,10 +798,13 @@ impl Render for ExampleBlock {
                 this.child(
                     div()
                         .flex()
+                        .flex_wrap()
                         .items_center()
                         .justify_between()
+                        .gap_x_4()
                         .child(
                             div()
+                                .min_w_0()
                                 .text_size(px(20.))
                                 .text_color(palette.base)
                                 .child(example.display_title()),
@@ -768,7 +847,7 @@ impl Render for ExampleBlock {
                             .id("styleguide-preview")
                             .overflow_x_scroll()
                             .rounded_t(px(3.))
-                            .child(self.preview.clone()),
+                            .child(self.sized(self.preview.clone())),
                     )
                     .when(has_knobs || has_code, |this| {
                         this.child(
@@ -827,14 +906,25 @@ impl Render for ExampleBlock {
                     }),
             )
             .when(!self.states.is_empty(), |this| {
-                this.child(self.states_grid(cx))
+                this.child(self.states_grid(is_narrow(window), cx))
             })
     }
 }
 
 impl ExampleBlock {
+    /// A fixed-size example keeps its width on a narrow window and scrolls
+    /// sideways, instead of squeezing a layout drawn for that size.
+    fn sized(&self, preview: AnyView) -> impl IntoElement {
+        let fixed = self.example().fixed_size();
+        div()
+            .when_some(fixed, |this, size| {
+                this.min_w(size.width + px(2. * PADDING))
+            })
+            .child(preview)
+    }
+
     /// Every named state side by side, each with its code.
-    fn states_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn states_grid(&self, narrow: bool, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = palette();
         let id = self.example().id().clone();
         div()
@@ -851,7 +941,7 @@ impl ExampleBlock {
             .child(
                 div()
                     .grid()
-                    .grid_cols(2)
+                    .grid_cols(if narrow { 1 } else { 2 })
                     .gap_4()
                     .children(self.states.iter().enumerate().map(|(index, state)| {
                         let code: SharedString = self.example().code_for(&state.knobs).into();
@@ -940,7 +1030,7 @@ impl ExampleBlock {
                                 div()
                                     .id("styleguide-preview")
                                     .overflow_x_scroll()
-                                    .child(state.preview.clone()),
+                                    .child(self.sized(state.preview.clone())),
                             )
                             .child(code_block(&code))
                     })),
@@ -1037,8 +1127,9 @@ fn edit_text(text: &mut String, event: &KeyDownEvent, editing: &mut bool) -> boo
 }
 
 impl Render for KnobPanel {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = palette();
+        let narrow = is_narrow(window);
         let specs = self.knobs.specs();
         div()
             .id("styleguide-knobs")
@@ -1086,7 +1177,7 @@ impl Render for KnobPanel {
                         let samples = samples.clone();
                         let field = div()
                             .id(("styleguide-knob", index))
-                            .min_w(px(220.))
+                            .min_w(px(if narrow { 160. } else { 220. }))
                             .px_2()
                             .py_1()
                             .rounded(px(3.))
@@ -1110,6 +1201,7 @@ impl Render for KnobPanel {
                             }));
                         div()
                             .flex()
+                            .flex_wrap()
                             .items_center()
                             .gap_2()
                             .child(field)
@@ -1169,19 +1261,30 @@ impl Render for KnobPanel {
                     }
                     _ => div().child("unsupported value").into_any_element(),
                 };
+                // A narrow window puts the knob's name above its control.
                 div()
                     .flex()
-                    .items_center()
-                    .gap_3()
+                    .map(|this| {
+                        if narrow {
+                            this.flex_col().items_start().gap_1()
+                        } else {
+                            this.items_center().gap_3()
+                        }
+                    })
                     .child(
                         div()
-                            .w(px(120.))
+                            .when(!narrow, |this| this.w(px(120.)))
                             .flex_none()
                             .font_family(MONO)
                             .text_color(palette.light)
                             .child(name),
                     )
-                    .child(control)
+                    .child(
+                        div()
+                            .min_w_0()
+                            .when(narrow, |this| this.w_full())
+                            .child(control),
+                    )
             }))
             .when(!specs.is_empty(), |this| {
                 this.child(div().pt_1().child(
