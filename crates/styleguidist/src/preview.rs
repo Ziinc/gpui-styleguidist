@@ -13,7 +13,7 @@ pub(crate) const PADDING: f32 = 16.;
 pub(crate) struct Canvas {
     pub(crate) content: AnyView,
     pub(crate) background: Rc<dyn Fn(&App) -> Hsla>,
-    pub(crate) foreground: Rc<dyn Fn(&App) -> Hsla>,
+    pub(crate) foreground: Option<crate::guide::ColorFn>,
     pub(crate) fill: bool,
 }
 
@@ -22,7 +22,9 @@ impl Render for Canvas {
         div()
             .size_full()
             .bg((self.background)(cx))
-            .text_color((self.foreground)(cx))
+            .when_some(self.foreground.as_ref(), |this, foreground| {
+                this.text_color(foreground(cx))
+            })
             .p(px(PADDING))
             .flex()
             .items_start()
