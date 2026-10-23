@@ -770,10 +770,12 @@ fn build_preview(
     let example = &guide.examples[index];
     let content = (example.builder())(knobs, window, cx);
     let background = guide.background.clone();
+    let foreground = guide.foreground.clone();
     let fill = example.fixed_size().is_some();
     cx.new(|_| Canvas {
         content,
         background,
+        foreground,
         fill,
     })
     .into()

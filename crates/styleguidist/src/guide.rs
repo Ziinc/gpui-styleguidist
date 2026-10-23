@@ -2,7 +2,7 @@ use crate::Knobs;
 use gpui::{
     AnyElement, AnyView, AnyWindowHandle, App, AppContext as _, AssetSource, Context, Entity, Hsla,
     IntoElement, ParentElement as _, Pixels, Render, SharedString, Size, Styled as _, Window,
-    WindowOptions, div, px, size, white,
+    WindowOptions, black, div, px, size, white,
 };
 use gpui_styleguidist_manifest::{CodePart, render_code};
 use std::{borrow::Cow, path::PathBuf, rc::Rc, sync::Arc};
@@ -262,6 +262,7 @@ pub struct Styleguide {
     pub(crate) themes: Vec<SharedString>,
     pub(crate) apply_theme: Option<ThemeFn>,
     pub(crate) background: Rc<dyn Fn(&App) -> Hsla>,
+    pub(crate) foreground: Rc<dyn Fn(&App) -> Hsla>,
     pub(crate) assets: Option<Arc<dyn AssetSource>>,
     pub(crate) fonts: Vec<Cow<'static, [u8]>>,
     pub(crate) playground_url: Option<String>,
@@ -280,6 +281,7 @@ impl Styleguide {
             themes: vec!["default".into()],
             apply_theme: None,
             background: Rc::new(|_| white()),
+            foreground: Rc::new(|_| black()),
             assets: None,
             fonts: Vec::new(),
             playground_url: None,
@@ -374,6 +376,14 @@ impl Styleguide {
     /// The canvas color behind previews, usually the theme's background.
     pub fn background(mut self, background: impl Fn(&App) -> Hsla + 'static) -> Self {
         self.background = Rc::new(background);
+        self
+    }
+
+    /// The text color previews inherit, usually the theme's body text. Set
+    /// it with a dark background, or text the components don't color
+    /// themselves stays dark on dark.
+    pub fn foreground(mut self, foreground: impl Fn(&App) -> Hsla + 'static) -> Self {
+        self.foreground = Rc::new(foreground);
         self
     }
 

@@ -45,6 +45,7 @@ pub fn styleguide() -> Styleguide {
             Theme::change(mode, None, cx);
         })
         .background(|cx| cx.theme().background)
+        .foreground(|cx| cx.theme().foreground)
         .describe("Button", "Buttons trigger actions.")
         .example(
             example!("button/primary", |knobs, _, _| {
